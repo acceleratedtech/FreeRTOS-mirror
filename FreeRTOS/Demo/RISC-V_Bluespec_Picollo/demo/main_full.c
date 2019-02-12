@@ -105,6 +105,7 @@ equivalent in ticks using the portTICK_PERIOD_MS constant. */
 #define mainBLOCK_Q_PRIORITY		( tskIDLE_PRIORITY + 2 )
 //#define mainFLOP_TASK_PRIORITY		( tskIDLE_PRIORITY )
 #define mainINTEGER_TASK_PRIORITY		( tskIDLE_PRIORITY )
+#define TEST_ITERATIONS 2
 
 void main_full( void );
 
@@ -214,10 +215,15 @@ unsigned long ulErrorFound = pdFALSE;
 
 	if( ulErrorFound != pdFALSE )
 	{
-		__asm volatile("li t6, 0xbeefdead");
+		__asm volatile("li t6, 0xbeefdead\n" \ 
+			"ebreak");
 		printf("One or more threads has exited! \r\n");
 	}else{
-		__asm volatile("li t6, 0xdeadbeef");
+		if (count > (TEST_ITERATIONS - 1))
+		{
+			__asm volatile("li t6, 0xdeadbeef\n" \
+			"ebreak");
+		}
 		printf("[%d] All threads still alive! \r\n", count++);
 	}
 }
