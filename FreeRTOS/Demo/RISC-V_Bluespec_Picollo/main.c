@@ -40,10 +40,7 @@
 	#pragma message "Demo type 1: Basic Blinky"
 	extern void main_blinky( void );
 #elif mainDEMO_TYPE == 2
-	#pragma message "Demo type 2: Minimal"
-	extern void main_minimal( void );
-#elif mainDEMO_TYPE == 3
-	#pragma message "Demo type 3: Full"
+	#pragma message "Demo type 2: Full"
 	extern void main_full( void );
 #else
 	#error "Unsupported demo type"
@@ -80,10 +77,6 @@ int main( void )
 		main_blinky();
 	}
 	#elif mainDEMO_TYPE == 2
-	{
-		main_minimal();
-	}
-	#elif mainDEMO_TYPE == 3
 	{
 		main_full();
 	}
@@ -156,5 +149,3 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 /*-----------------------------------------------------------*/
 
 void vApplicationTickHook( void ) {}
-
-

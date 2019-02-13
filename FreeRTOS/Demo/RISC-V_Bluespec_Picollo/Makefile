@@ -48,8 +48,14 @@ APP_SRC =  \
 	$(APP_SOURCE_DIR)/integer.c \
 	$(APP_SOURCE_DIR)/MessageBufferDemo.c \
 	$(APP_SOURCE_DIR)/PollQ.c \
+	$(APP_SOURCE_DIR)/GenQTest.c \
 	$(APP_SOURCE_DIR)/QPeek.c \
 	$(APP_SOURCE_DIR)/recmutex.c \
+	$(APP_SOURCE_DIR)/TimerDemo.c \
+	$(APP_SOURCE_DIR)/EventGroupsDemo.c \
+	$(APP_SOURCE_DIR)/TaskNotify.c \
+	$(APP_SOURCE_DIR)/StreamBufferDemo.c \
+	$(APP_SOURCE_DIR)/StreamBufferInterrupt.c \
 	$(APP_SOURCE_DIR)/semtest.c
 
 PORT_SRC = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/port.c
@@ -65,15 +71,11 @@ ifeq ($(DEMO_TYPE),1)
 DEMO_SRC += demo/main_blinky.c
 else
 ifeq ($(DEMO_TYPE),2)
-# compiling minimal demo
-DEMO_SRC += demo/main_minimal.c
-else
-ifeq ($(DEMO_TYPE),3)
 # compiling full demo
 DEMO_SRC += demo/main_full.c
+PORT_ASM += demo/RegTest.S
 else
 $(info unknown demo: $(DEMO_TYPE))
-endif
 endif
 endif
 
