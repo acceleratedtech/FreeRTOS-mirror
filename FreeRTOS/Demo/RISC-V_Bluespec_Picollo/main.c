@@ -148,4 +148,12 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 }
 /*-----------------------------------------------------------*/
 
-void vApplicationTickHook( void ) {}
+void vApplicationTickHook( void ) {
+	/* The tests in the full demo expect some interaction with interrupts. */
+	#if( mainDEMO_TYPE != 1 )
+	{
+		extern void vFullDemoTickHook( void );
+		vFullDemoTickHook();
+	}
+	#endif
+}
