@@ -172,13 +172,13 @@ void main_full( void )
 	vStartGenericQueueTasks( tskIDLE_PRIORITY );
 	vStartRecursiveMutexTasks();
 	vStartTimerDemoTask( mainTIMER_TEST_PERIOD );
-	vStartEventGroupTasks(); // FAIL
-	vStartTaskNotifyTask(); // Fails after one iteration
+	vStartEventGroupTasks();
+	vStartTaskNotifyTask();
 	vCreateAbortDelayTasks();
 	vStartCountingSemaphoreTasks();
-	//vStartMessageBufferTasks( configMINIMAL_STACK_SIZE  ); // ebreak after 2-3 loops
-	vStartStreamBufferTasks(); // Fails
-	vStartStreamBufferInterruptDemo(); // Fails
+	//vStartMessageBufferTasks( configMINIMAL_STACK_SIZE * 2 ); // fails in malloc
+	vStartStreamBufferTasks();
+	vStartStreamBufferInterruptDemo();
 
 	/* Create the register check tasks, as described at the top of this	file.
 	Use xTaskCreateStatic() to create a task using only statically allocated
@@ -199,10 +199,10 @@ void main_full( void )
 	/* The set of tasks created by the following function call have to be
 	created last as they keep account of the number of tasks they expect to see
 	running. */
-	vCreateSuicidalTasks( mainCREATOR_TASK_PRIORITY );
+	vCreateSuicidalTasks( mainCREATOR_TASK_PRIORITY ); // if this and vStartMessageBufferTasks() is enabled, we have malloc problem
 
 	/* Start the timers that are used to exercise external interrupt handling. */
-	//prvSetupPeripheralTimers();
+	prvSetupPeripheralTimers();
 
 	/* Start the scheduler. */
 	vTaskStartScheduler();
