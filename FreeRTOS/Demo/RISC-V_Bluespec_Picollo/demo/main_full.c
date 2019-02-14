@@ -176,7 +176,7 @@ void main_full( void )
 	vStartTaskNotifyTask();
 	vCreateAbortDelayTasks();
 	vStartCountingSemaphoreTasks();
-	//vStartMessageBufferTasks( configMINIMAL_STACK_SIZE * 2 ); // fails in malloc
+	vStartMessageBufferTasks( configMINIMAL_STACK_SIZE ); // fails in malloc
 	vStartStreamBufferTasks();
 	vStartStreamBufferInterruptDemo();
 
@@ -301,10 +301,10 @@ extern void vToggleLED( void );
 			pcStatusMessage = "ERROR: Suicide tasks.\r\n";
 		}
 
-		//if( xAreMessageBufferTasksStillRunning() == pdFALSE )
-		//{
-		//	pcStatusMessage = "ERROR: Message buffer.\r\n";
-		//}
+		if( xAreMessageBufferTasksStillRunning() == pdFALSE )
+		{
+			pcStatusMessage = "ERROR: Message buffer.\r\n";
+		}
 
 		if( xAreStreamBufferTasksStillRunning() == pdFALSE )
 		{
