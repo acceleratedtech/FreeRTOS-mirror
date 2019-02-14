@@ -110,7 +110,7 @@ stack. */
 #define mainCHECK_TASK_STACK_SIZE_WORDS 200
 
 /* Size of the stacks to allocated for the register check tasks. */
-#define mainREG_TEST_STACK_SIZE_WORDS 150
+#define mainREG_TEST_STACK_SIZE_WORDS 512
 
 /*-----------------------------------------------------------*/
 
@@ -183,13 +183,13 @@ void main_full( void )
 	/* Create the register check tasks, as described at the top of this	file.
 	Use xTaskCreateStatic() to create a task using only statically allocated
 	memory. */
-//	xTaskCreate( prvRegTestTaskEntry1, 			/* The function that implements the task. */
-//				 "Reg1", 						/* The name of the task. */
-//				 mainREG_TEST_STACK_SIZE_WORDS, /* Size of stack to allocate for the task - in words not bytes!. */
-//				 mainREG_TEST_TASK_1_PARAMETER, /* Parameter passed into the task. */
-//				 tskIDLE_PRIORITY, 				/* Priority of the task. */
-	//			 NULL );						/* Can be used to pass out a handle to the created task. */
-	//xTaskCreate( prvRegTestTaskEntry2, "Reg2", mainREG_TEST_STACK_SIZE_WORDS, mainREG_TEST_TASK_2_PARAMETER, tskIDLE_PRIORITY, NULL ); // Both fail with ebreak
+	xTaskCreate( prvRegTestTaskEntry1, 			/* The function that implements the task. */
+				 "Reg1", 						/* The name of the task. */
+				 mainREG_TEST_STACK_SIZE_WORDS, /* Size of stack to allocate for the task - in words not bytes!. */
+				 mainREG_TEST_TASK_1_PARAMETER, /* Parameter passed into the task. */
+				 tskIDLE_PRIORITY, 				/* Priority of the task. */
+				 NULL );						/* Can be used to pass out a handle to the created task. */
+	xTaskCreate( prvRegTestTaskEntry2, "Reg2", mainREG_TEST_STACK_SIZE_WORDS, mainREG_TEST_TASK_2_PARAMETER, tskIDLE_PRIORITY, NULL ); // Both fail with ebreak
 	
 
 	/* Create the task that performs the 'check' functionality,	as described at
@@ -317,18 +317,18 @@ extern void vToggleLED( void );
 		}
 
 		/* Check that the register test 1 task is still running. */
-		//if( ulLastRegTest1Value == ulRegTest1LoopCounter )
-		//{
-		//	pcStatusMessage = "ERROR: Register test 1.\r\n";
-		//}
-		//ulLastRegTest1Value = ulRegTest1LoopCounter;
+		if( ulLastRegTest1Value == ulRegTest1LoopCounter )
+		{
+			pcStatusMessage = "ERROR: Register test 1.\r\n";
+		}
+		ulLastRegTest1Value = ulRegTest1LoopCounter;
 
 		/* Check that the register test 2 task is still running. */
-		//if( ulLastRegTest2Value == ulRegTest2LoopCounter )
-		//{
-		//	pcStatusMessage = "ERROR: Register test 2.\r\n";
-		//}
-		//ulLastRegTest2Value = ulRegTest2LoopCounter;
+		if( ulLastRegTest2Value == ulRegTest2LoopCounter )
+		{
+			pcStatusMessage = "ERROR: Register test 2.\r\n";
+		}
+		ulLastRegTest2Value = ulRegTest2LoopCounter;
 
 		/* Write the status message to the UART. */
 		vToggleLED();
