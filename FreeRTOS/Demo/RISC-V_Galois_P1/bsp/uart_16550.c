@@ -49,68 +49,135 @@ struct __attribute__ ((aligned (4))) uart_pio
 };
 
 
-static struct uart_pio * pio = (void*)UART_BASE;
+static struct uart_pio * pio0 = (void*)UART0_BASE;
+static struct uart_pio * pio1 = (void*)UART1_BASE;
 
-int UART_init(void)
+__attribute__ ((constructor))
+int uart0_init(void)
 {
   uint32_t divisor;
   divisor = UART_CLOCK_RATE / (16 * DEFAULT_BAUDRATE);
 
   /* Disable all interrupts */
-  pio->ier = 0;
+  pio0->ier = 0;
 
   /* DLAB=1, Set Divisor Latch MSB and LSB registers */
-  pio->lcr |= LCR_DLAB;
-  pio->dll = divisor & 0xff;
-  pio->dlm = (divisor >> 8) & 0xff;
+  pio0->lcr |= LCR_DLAB;
+  pio0->dll = divisor & 0xff;
+  pio0->dlm = (divisor >> 8) & 0xff;
 
   /* DLAB=0 Allow access to RBR, THR, IER, IIR registers*/
-  pio->lcr &= ~LCR_DLAB;
+  pio0->lcr &= ~LCR_DLAB;
 
   /* 8 bits/char, 2 stop bits */
-  pio->lcr = 7;
+  pio0->lcr = 7;
 
   /* Enable FIFOs */
-  pio->fcr = FCR_FE;
+  pio0->fcr = FCR_FE;
 
   /* Drive RTSN (request to send) low */
-  pio->mcr = MCR_RTS;
+  pio0->mcr = MCR_RTS;
 
   return 0;
 }
 
 
-int UART_rxready(void)
+int uart0_rxready(void)
 {
-  return ((pio->lsr & LSR_DR) != 0);
+  return ((pio0->lsr & LSR_DR) != 0);
 }
 
 
-int UART_rxchar(void)
+int uart0_rxchar(void)
 {
-  while ((pio->lsr & LSR_DR) == 0)
+  while ((pio0->lsr & LSR_DR) == 0)
     ;  /* Wait */
 
-  return pio->rbr;
+  return pio0->rbr;
 }
 
 
-int UART_txchar(int c)
+int uart0_txchar(int c)
 {
-  while ((pio->lsr & LSR_THRE) == 0)
+  while ((pio0->lsr & LSR_THRE) == 0)
     ;  /* Wait */
 
-  pio->thr = c;
+  pio0->thr = c;
 
   return c;
 }
 
 /* Wait for transmitter shift register/FIFO to empty */
-void UART_flush(void)
+void uart0_flush(void)
 {
-  while ((pio->lsr & LSR_TEMT) == 0)
+  while ((pio0->lsr & LSR_TEMT) == 0)
     ;  /* Wait */
 
-  while ((pio->lsr & LSR_THRE) == 0)
+  while ((pio0->lsr & LSR_THRE) == 0)
     ;  /* Wait */
 }
+
+int uart1_init(void)
+{
+  uint32_t divisor;
+  divisor = UART_CLOCK_RATE / (16 * UART1_BAUDRATE);
+
+  /* Disable all interrupts */
+  pio1->ier = 0;
+
+  /* DLAB=1, Set Divisor Latch MSB and LSB registers */
+  pio1->lcr |= LCR_DLAB;
+  pio1->dll = divisor & 0xff;
+  pio1->dlm = (divisor >> 8) & 0xff;
+
+  /* DLAB=0 Allow access to RBR, THR, IER, IIR registers*/
+  pio1->lcr &= ~LCR_DLAB;
+
+  /* 8 bits/char, 2 stop bits */
+  pio1->lcr = 7;
+
+  /* Enable FIFOs */
+  pio1->fcr = FCR_FE;
+
+  /* Drive RTSN (request to send) low */
+  pio1->mcr = MCR_RTS;
+
+  return 0;
+}
+
+
+int uart1_rxready(void)
+{
+  return ((pio1->lsr & LSR_DR) != 0);
+}
+
+
+int uart1_rxchar(void)
+{
+  while ((pio1->lsr & LSR_DR) == 0)
+    ;  /* Wait */
+
+  return pio1->rbr;
+}
+
+
+int uart1_txchar(int c)
+{
+  while ((pio1->lsr & LSR_THRE) == 0)
+    ;  /* Wait */
+
+  pio1->thr = c;
+
+  return c;
+}
+
+/* Wait for transmitter shift register/FIFO to empty */
+void uart1_flush(void)
+{
+  while ((pio1->lsr & LSR_TEMT) == 0)
+    ;  /* Wait */
+
+  while ((pio1->lsr & LSR_THRE) == 0)
+    ;  /* Wait */
+}
+

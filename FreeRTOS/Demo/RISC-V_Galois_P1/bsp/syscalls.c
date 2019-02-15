@@ -25,7 +25,7 @@ int _write(int file, char *ptr, int len) {
   int todo;
   (void)file;
   for (todo = 0; todo < len; todo++) {
-    UART_txchar (*ptr++);
+    uart0_txchar (*ptr++);
   }
   return len;
 }

@@ -42,9 +42,12 @@
 #elif mainDEMO_TYPE == 2
 	#pragma message "Demo type 2: Full"
 	extern void main_full( void );
+#elif mainDEMO_TYPE == 3
+	#pragma message "Demo type 3: Barcode test"
+	extern void main_barcode( void );	
 #else
 	#error "Unsupported demo type"
-#endif /* #if mainCREATE_SIMPLE_BLINKY_DEMO_ONLY == 1 */
+#endif
 
 /* Prototypes for the standard FreeRTOS callback/hook functions implemented
 within this file.  See https://www.freertos.org/a00016.html */
@@ -80,13 +83,17 @@ int main( void )
 	{
 		main_full();
 	}
+	#elif mainDEMO_TYPE == 3
+	{
+		main_barcode();
+	}
 	#endif
 }
 /*-----------------------------------------------------------*/
 
 static void prvSetupHardware( void )
 {
-	UART_init();
+	uart0_init();
  	//PLIC_init();
  	//UART_init( &g_uart, COREUARTAPB0_BASE_ADDR, BAUD_VALUE_115200, ( DATA_8_BITS | NO_PARITY ) );
 }
@@ -150,7 +157,7 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 
 void vApplicationTickHook( void ) {
 	/* The tests in the full demo expect some interaction with interrupts. */
-	#if( mainDEMO_TYPE != 1 )
+	#if( mainDEMO_TYPE == 2 )
 	{
 		extern void vFullDemoTickHook( void );
 		vFullDemoTickHook();

@@ -89,7 +89,11 @@ ifeq ($(PROG),main_full)
 	CFLAGS += -DmainDEMO_TYPE=2
 	PORT_ASM += demo/RegTest.S
 else
+ifeq ($(PROG),main_barcode)
+	CFLAGS += -DmainDEMO_TYPE=3
+else
 	$(info unknown demo: $(PROG))
+endif
 endif
 endif
 
