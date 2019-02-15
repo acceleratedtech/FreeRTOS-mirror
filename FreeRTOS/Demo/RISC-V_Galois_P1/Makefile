@@ -61,6 +61,20 @@ APP_SRC =  \
 PORT_SRC = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/port.c
 PORT_ASM = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/portASM.S
 
+INCLUDES = \
+	-I. \
+	-I./bsp \
+	-I$(FREERTOS_SOURCE_DIR)/include \
+	-I../Common/include \
+	-I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32
+
+ASFLAGS  += -g $(ARCH) $(ABI)  -Wa,-Ilegacy -I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/chip_specific_extensions/RV32I_CLINT_no_extensions -DportasmHANDLE_INTERRUPT=external_interrupt_handler
+
+CFLAGS = $(WARNINGS) $(INCLUDES) -DmainDEMO_TYPE=$(DEMO_TYPE)
+CFLAGS += -O0 -g3 $(ARCH) $(ABI) -mcmodel=medany
+
+ARFLAGS=crsv
+
 DEMO_SRC = main.c \
 	bsp/bsp.c \
 	bsp/uart_16550.c \
@@ -75,23 +89,26 @@ ifeq ($(DEMO_TYPE),2)
 DEMO_SRC += demo/main_full.c
 PORT_ASM += demo/RegTest.S
 else
+ifeq ($(DEMO_TYPE),3)
+# test drivers
+DEMO_SRC += demo/main_drivers.c
+INCLUDES += \
+	-I./bsp/xilinx \
+	-I./bsp/xilinx/iic/src \
+	-I./bsp/xilinx/common
+DEMO_SRC += \
+	./bsp/xilinx/iic/src/xiic.c \
+	./bsp/xilinx/common/xbasic_types.c \
+	./bsp/xilinx/common/xil_io.c \
+	./bsp/xilinx/common/xil_assert.c \
+	./bsp/xilinx/common/xiic_stats.c
+	
+	
+else
 $(info unknown demo: $(DEMO_TYPE))
 endif
 endif
-
-INCLUDES = \
-	-I. \
-	-I./bsp \
-	-I$(FREERTOS_SOURCE_DIR)/include \
-	-I../Common/include \
-	-I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32
-
-ASFLAGS  += -g $(ARCH) $(ABI)  -Wa,-Ilegacy -I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/chip_specific_extensions/RV32I_CLINT_no_extensions -DportasmHANDLE_INTERRUPT=external_interrupt_handler
-
-CFLAGS = $(WARNINGS) $(INCLUDES) -DmainDEMO_TYPE=$(DEMO_TYPE)
-CFLAGS += -O0 -g3 $(ARCH) $(ABI) -mcmodel=medany
-
-ARFLAGS=crsv
+endif
 
 #
 # Define all object files.
