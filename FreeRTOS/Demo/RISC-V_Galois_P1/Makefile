@@ -58,17 +58,17 @@ APP_SRC =  \
 	$(APP_SOURCE_DIR)/StreamBufferInterrupt.c \
 	$(APP_SOURCE_DIR)/semtest.c
 
-PORT_SRC = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/port.c
-PORT_ASM = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/portASM.S
+PORT_SRC = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V/port.c
+PORT_ASM = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V/portASM.S
 
 INCLUDES = \
 	-I. \
 	-I./bsp \
 	-I$(FREERTOS_SOURCE_DIR)/include \
 	-I../Common/include \
-	-I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32
+	-I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V
 
-ASFLAGS  += -g $(ARCH) $(ABI)  -Wa,-Ilegacy -I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/chip_specific_extensions/RV32I_CLINT_no_extensions -DportasmHANDLE_INTERRUPT=external_interrupt_handler
+ASFLAGS  += -g $(ARCH) $(ABI)  -Wa,-Ilegacy -I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V/chip_specific_extensions/RV32I_CLINT_no_extensions -DportasmHANDLE_INTERRUPT=external_interrupt_handler
 
 CFLAGS = $(WARNINGS) $(INCLUDES) -DmainDEMO_TYPE=$(DEMO_TYPE)
 CFLAGS += -O0 -g3 $(ARCH) $(ABI) -mcmodel=medany
