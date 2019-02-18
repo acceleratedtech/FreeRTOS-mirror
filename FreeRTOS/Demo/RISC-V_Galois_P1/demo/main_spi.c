@@ -147,102 +147,102 @@ void vTestSPI( void *pvParameters )
   vTaskDelete( NULL );
 }
 
-void vTestSPISD( void *pvParameters )
-{
-	/* vTestSPISD() tests writing to an SD card using AXI SPI and a
-	Digilent PMOD SD connector */
+// void vTestSPISD( void *pvParameters )
+// {
+// 	/* vTestSPISD() tests writing to an SD card using AXI SPI and a
+// 	Digilent PMOD SD connector */
 
-	/***** INIT *****/
-	/* Software reset */
-	SPI_SRR = 0xa;
+// 	/***** INIT *****/
+// 	/* Software reset */
+// 	SPI_SRR = 0xa;
 
-	/* Set to Master mode */
-	SPICR |= 0x4;
+// 	/* Set to Master mode */
+// 	SPICR |= 0x4;
 
-	/* Set CPHA=0, CPOL=0 */
-	SPI_CR &= ~(0x18);
+// 	/* Set CPHA=0, CPOL=0 */
+// 	SPI_CR &= ~(0x18);
 
-	/***** Set SD card to SPI mode *****/
-	/* Need to set to SPI mode first? */
+// 	/***** Set SD card to SPI mode *****/
+// 	/* Need to set to SPI mode first? */
 
-	/* Send CMD0 (GO_IDLE_STATE) and assert chip select */
-	/* Inhibit master */
-	SPICR |= 0x100;
+// 	/* Send CMD0 (GO_IDLE_STATE) and assert chip select */
+// 	/* Inhibit master */
+// 	SPICR |= 0x100;
 
-	/* Write CMD0 (reset) to data transmit register */
-	/* Needs CRC value? */
-	SPI_DTR = 00000000;
+// 	/* Write CMD0 (reset) to data transmit register */
+// 	/* Needs CRC value? */
+// 	SPI_DTR = 00000000;
 
-	/* SPI system enable (SPE) */
-	SPICR |= 0x2;
+// 	/* SPI system enable (SPE) */
+// 	SPICR |= 0x2;
 
-	/* Assert chip select */
-	SPI_SSR &= 0;
+// 	/* Assert chip select */
+// 	SPI_SSR &= 0;
 
-	/* Deinhibit master */
-	SPICR &= ~(0x100);
+// 	/* Deinhibit master */
+// 	SPICR &= ~(0x100);
 
-	/* Deassert chip select */
-	SPI_SSR |= 1;
+// 	/* Deassert chip select */
+// 	SPI_SSR |= 1;
 
-	/* Inhibit master */
-	SPICR |= 0x100;
+// 	/* Inhibit master */
+// 	SPICR |= 0x100;
 
-	/* Check for R1 response? */
+// 	/* Check for R1 response? */
 
-	/* Initiate initialization process w/ CMD1 (or ACDM41?) */
+// 	 Initiate initialization process w/ CMD1 (or ACDM41?) 
 
-	/* Check response until end of initialization */
+// 	/* Check response until end of initialization */
 
-	/* R1 resp should change from 0x01 to 0x00 */
+// 	/* R1 resp should change from 0x01 to 0x00 */
 
-	/* Send CMD8 (SEND_IF_COND) */
+// 	/* Send CMD8 (SEND_IF_COND) */
 	
 
-	/***** WRITE *****/
-	/* Inhibit master */
-	SPICR |= 0x100;
+// 	/***** WRITE *****/
+// 	/* Inhibit master */
+// 	SPICR |= 0x100;
 
-	/* Write data to data transmit register */
-	SPI_DTR = 'h';
-	SPI_DTR = 'e';
-	SPI_DTR = 'l';
-	SPI_DTR = 'l';
-	SPI_DTR = 'o';
-	SPI_DTR = '!';
+// 	/* Write data to data transmit register */
+// 	SPI_DTR = 'h';
+// 	SPI_DTR = 'e';
+// 	SPI_DTR = 'l';
+// 	SPI_DTR = 'l';
+// 	SPI_DTR = 'o';
+// 	SPI_DTR = '!';
 
-	/* SPI system enable (SPE) */
-	SPICR |= 0x2;
+// 	/* SPI system enable (SPE) */
+// 	SPICR |= 0x2;
 
-	/* Assert chip select */
-	SPI_SSR &= 0;
+// 	/* Assert chip select */
+// 	SPI_SSR &= 0;
 
-	/* Deinhibit master */
-	SPICR &= ~(0x100);
+// 	/* Deinhibit master */
+// 	SPICR &= ~(0x100);
 
-	/* Deassert chip select */
-	SPI_SSR |= 1;
+// 	/* Deassert chip select */
+// 	SPI_SSR |= 1;
 
-	/* Inhibit master */
-	SPICR |= 0x100;
+// 	/* Inhibit master */
+// 	SPICR |= 0x100;
 
-	/***** READ *****/
-	/* Send read data command (and address) to SD card */
+// 	/***** READ *****/
+// 	/* Send read data command (and address) to SD card */
 
-	/* Assert chip select */
-	SPI_SSR &= 0;
+// 	/* Assert chip select */
+// 	SPI_SSR &= 0;
 
-	/* Deinhibit master */
-	SPICR &= ~(0x100);
+// 	/* Deinhibit master */
+// 	SPICR &= ~(0x100);
 
-	/* Deassert chip select */
-	SPI_SSR |= 1;
+// 	/* Deassert chip select */
+// 	SPI_SSR |= 1;
 
-	/* Inhibit master */
-	SPICR |= 0x100;
+// 	/* Inhibit master */
+// 	SPICR |= 0x100;
 
-	/* Read data read register */
+// 	/* Read data read register */
 
-}
+// }
 
 /*-----------------------------------------------------------*/
