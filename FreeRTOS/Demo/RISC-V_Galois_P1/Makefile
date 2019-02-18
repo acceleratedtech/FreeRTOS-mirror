@@ -92,7 +92,16 @@ else
 ifeq ($(PROG),main_barcode)
 	CFLAGS += -DmainDEMO_TYPE=3
 else
+ifeq ($(PROG),main_gpio)
+	CFLAGS += -DmainDEMO_TYPE=4
+	DEMO_SRC += bsp/gpio.c
+else
+ifeq ($(PROG),main_spi)
+	CFLAGS += -DmainDEMO_TYPE=5
+else
 	$(info unknown demo: $(PROG))
+endif
+endif
 endif
 endif
 endif

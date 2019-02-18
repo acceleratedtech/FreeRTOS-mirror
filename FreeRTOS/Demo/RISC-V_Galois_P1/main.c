@@ -44,7 +44,13 @@
 	extern void main_full( void );
 #elif mainDEMO_TYPE == 3
 	#pragma message "Demo type 3: Barcode test"
-	extern void main_barcode( void );	
+	extern void main_barcode( void );
+#elif mainDEMO_TYPE == 4
+	#pragma message "Demo type 4: GPIO test"
+	extern void main_gpio( void );
+#elif mainDEMO_TYPE == 5
+	#pragma message "Demo type 5: SPI test"
+	extern void main_spi( void );
 #else
 	#error "Unsupported demo type"
 #endif
@@ -86,6 +92,14 @@ int main( void )
 	#elif mainDEMO_TYPE == 3
 	{
 		main_barcode();
+	}
+	#elif mainDEMO_TYPE == 4
+	{
+		main_gpio();
+	}
+	#elif mainDEMO_TYPE == 5
+	{
+		main_spi();
 	}
 	#endif
 }
