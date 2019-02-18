@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel V10.1.1
- * Copyright (C) 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V10.2.0
+ * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -75,24 +75,7 @@ functions but without including stdio.h here. */
  */
 #define tskSTACK_FILL_BYTE	( 0xa5U )
 
-/* Sometimes the FreeRTOSConfig.h settings only allow a task to be created using
-dynamically allocated RAM, in which case when any task is deleted it is known
-that both the task's stack and TCB need to be freed.  Sometimes the
-FreeRTOSConfig.h settings only allow a task to be created using statically
-allocated RAM, in which case when any task is deleted it is known that neither
-the task's stack or TCB should be freed.  Sometimes the FreeRTOSConfig.h
-settings allow a task to be created using either statically or dynamically
-allocated RAM, in which case a member of the TCB is used to record whether the
-stack and/or TCB were allocated statically or dynamically, so when a task is
-deleted the RAM that was allocated dynamically is freed again and no attempt is
-made to free the RAM that was allocated statically.
-tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE is only true if it is possible for a
-task to be created using either statically or dynamically allocated RAM.  Note
-that if portUSING_MPU_WRAPPERS is 1 then a protected task can be created with
-a statically allocated stack and a dynamically allocated TCB.
-!!!NOTE!!! If the definition of tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE is
-changed then the definition of StaticTask_t must also be updated. */
-#define tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE	( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
+/* Bits used to recored how a task's stack and TCB were allocated. */
 #define tskDYNAMICALLY_ALLOCATED_STACK_AND_TCB 		( ( uint8_t ) 0 )
 #define tskSTATICALLY_ALLOCATED_STACK_ONLY 			( ( uint8_t ) 1 )
 #define tskSTATICALLY_ALLOCATED_STACK_AND_TCB		( ( uint8_t ) 2 )
@@ -326,7 +309,7 @@ typedef struct tskTaskControlBlock 			/* The old naming convention is used to pr
 		volatile uint8_t ucNotifyState;
 	#endif
 
-	/* See the comments above the definition of
+	/* See the comments in FreeRTOS.h with the definition of
 	tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE. */
 	#if( tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE != 0 ) /*lint !e731 !e9029 Macro has been consolidated for readability reasons. */
 		uint8_t	ucStaticallyAllocated; 		/*< Set to pdTRUE if the task is a statically allocated to ensure no attempt is made to free the memory. */
@@ -631,7 +614,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 				task was created statically in case the task is later deleted. */
 				pxNewTCB->ucStaticallyAllocated = tskSTATICALLY_ALLOCATED_STACK_AND_TCB;
 			}
-			#endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+			#endif /* tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE */
 
 			prvInitialiseNewTask( pxTaskCode, pcName, ulStackDepth, pvParameters, uxPriority, &xReturn, pxNewTCB, NULL );
 			prvAddNewTaskToReadyList( pxNewTCB );
@@ -673,7 +656,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 				task was created statically in case the task is later deleted. */
 				pxNewTCB->ucStaticallyAllocated = tskSTATICALLY_ALLOCATED_STACK_AND_TCB;
 			}
-			#endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+			#endif /* tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE */
 
 			prvInitialiseNewTask(	pxTaskDefinition->pvTaskCode,
 									pxTaskDefinition->pcName,
@@ -714,14 +697,14 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 				/* Store the stack location in the TCB. */
 				pxNewTCB->pxStack = pxTaskDefinition->puxStackBuffer;
 
-				#if( configSUPPORT_STATIC_ALLOCATION == 1 )
+				#if( tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE != 0 )
 				{
 					/* Tasks can be created statically or dynamically, so note
 					this task had a statically allocated stack in case it is
 					later deleted.  The TCB was allocated dynamically. */
 					pxNewTCB->ucStaticallyAllocated = tskSTATICALLY_ALLOCATED_STACK_ONLY;
 				}
-				#endif
+				#endif /* tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE */
 
 				prvInitialiseNewTask(	pxTaskDefinition->pvTaskCode,
 										pxTaskDefinition->pcName,
@@ -818,7 +801,7 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 				task was created dynamically in case it is later deleted. */
 				pxNewTCB->ucStaticallyAllocated = tskDYNAMICALLY_ALLOCATED_STACK_AND_TCB;
 			}
-			#endif /* configSUPPORT_STATIC_ALLOCATION */
+			#endif /* tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE */
 
 			prvInitialiseNewTask( pxTaskCode, pcName, ( uint32_t ) usStackDepth, pvParameters, uxPriority, pxCreatedTask, pxNewTCB, NULL );
 			prvAddNewTaskToReadyList( pxNewTCB );
