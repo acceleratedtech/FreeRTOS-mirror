@@ -179,6 +179,8 @@ BaseType_t xReturned;
 	}
 }
 /*-----------------------------------------------------------*/
+XIic Iic; /* The driver instance for IIC Device */
+#define TEMP_SENSOR_ADDRESS	0x18 /* The actual address is 0x30 */
 
 static void prvQueueReceiveTask( void *pvParameters )
 {
@@ -190,6 +192,22 @@ extern void vToggleLED( void );
 	
 	/* Remove compiler warning about unused parameter. */
 	( void ) pvParameters;
+
+	int status;
+	XIic_Config *ConfigPtr;	/* Pointer to configuration data */
+	uint16_t device_id = 0;
+	printf("Starting i2c config\r\n");
+	ConfigPtr = XIic_LookupConfig(device_id);
+	configASSERT(ConfigPtr != NULL);
+	printf("i2c lookup OK\r\n");
+	
+	status = XIic_CfgInitialize(&Iic, ConfigPtr, ConfigPtr->BaseAddress);
+	configASSERT(status == 0);
+	printf("i2c init status: %i\r\n",status);
+
+	status = XIic_SelfTest(&Iic);
+	configASSERT(status == 0);
+	printf("i2c selftest status: %i\r\n",status);
 
 	for( ;; )
 	{

@@ -98,6 +98,9 @@ INCLUDES += \
 	-I./bsp/xilinx/common
 DEMO_SRC += \
 	./bsp/xilinx/iic/src/xiic.c \
+	./bsp/xilinx/iic/src/xiic_g.c \
+	./bsp/xilinx/iic/src/xiic_sinit.c \
+	./bsp/xilinx/iic/src/xiic_selftest.c \
 	./bsp/xilinx/common/xbasic_types.c \
 	./bsp/xilinx/common/xil_io.c \
 	./bsp/xilinx/common/xil_assert.c \
