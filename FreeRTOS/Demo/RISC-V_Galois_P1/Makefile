@@ -76,8 +76,6 @@ ASFLAGS  += -g $(ARCH) $(ABI)  -Wa,-Ilegacy -I$(FREERTOS_SOURCE_DIR)/portable/GC
 CFLAGS = $(WARNINGS) $(INCLUDES) -DmainDEMO_TYPE=$(DEMO_TYPE)
 CFLAGS += -O0 -g3 $(ARCH) $(ABI) -mcmodel=medany
 
-ARFLAGS=crsv
-
 DEMO_SRC = main.c \
 	bsp/bsp.c \
 	bsp/uart_16550.c \
@@ -102,9 +100,9 @@ else
 ifeq ($(PROG),main_full)
 	CFLAGS += -DmainDEMO_TYPE=2
 	PORT_ASM += demo/RegTest.S
+else
 ifeq ($(PROG),main_drivers)
 	CFLAGS += -DmainDEMO_TYPE=3
-	DEMO_SRC += demo/main_drivers.c
 	INCLUDES += \
 		-I./bsp/xilinx \
 		-I./bsp/xilinx/iic/src \
