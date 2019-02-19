@@ -110,6 +110,18 @@ ifeq ($(PROG),main_gpio)
 else
 ifeq ($(PROG),main_spi)
 	CFLAGS += -DmainDEMO_TYPE=5
+	INCLUDES += \
+		-I./bsp/xilinx/spi/src \
+		-I./bsp/xilinx/common
+	DEMO_SRC += \
+		./bsp/xilinx/spi/src/xspi.c \
+		./bsp/xilinx/spi/src/xspi_g.c \
+		./bsp/xilinx/spi/src/xspi_sinit.c \
+		./bsp/xilinx/spi/src/xspi_selftest.c \
+		./bsp/xilinx/spi/src/xspi_options.c \
+		./bsp/xilinx/common/xbasic_types.c \
+		./bsp/xilinx/common/xil_io.c \
+		./bsp/xilinx/common/xil_assert.c
 else
 ifeq ($(PROG),main_drivers)
 	CFLAGS += -DmainDEMO_TYPE=6

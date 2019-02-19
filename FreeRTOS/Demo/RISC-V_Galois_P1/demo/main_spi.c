@@ -54,6 +54,12 @@
 /* Demo includes. */
 #include "uart_16550.h"
 
+/* Xilinx driver includes */
+#include "xparameters.h"
+#include "xspi.h"
+
+#define BUFFER_SIZE 16
+
 #define SPI_SRR (*(unsigned int *) 0x62320040)
 #define SPICR (*(unsigned int *) 0x62320060)
 #define SPISR (*(unsigned int *) 0x62320064)
@@ -73,12 +79,15 @@ void main_spi( void );
  */
 static void vTestSPI( void *pvParameters );
 
+static void vTestXilinxSPI( void *pvParameters );
+
 /*-----------------------------------------------------------*/
 
 void main_spi( void )
 {
 	/* Create SPI test */
-	xTaskCreate( vTestSPI, "SPI Test", 1000, NULL, 0, NULL );
+	// xTaskCreate( vTestSPI, "SPI Test", 1000, NULL, 0, NULL );
+  xTaskCreate( vTestXilinxSPI, "Xilinx SPI Test", 1000, NULL, 0, NULL );
 
 	/* Start the kernel.  From here on, only tasks and interrupts will run. */
 	vTaskStartScheduler();
@@ -145,6 +154,66 @@ void vTestSPI( void *pvParameters )
   printf( "Received: %c %c %c \n", spi_rx0, spi_rx1, spi_rx2);
 
   vTaskDelete( NULL );
+}
+
+/*-----------------------------------------------------------*/
+/* Instance of Spi device */
+static XSpi SpiInstance;
+
+/* Buffers used to read and write to SPI device */
+unsigned char ReadBuffer[BUFFER_SIZE];
+unsigned char WriteBuffer[BUFFER_SIZE];
+
+void vTestXilinxSPI( void *pvParameters )
+{
+  (void) pvParameters;
+
+  int Status_CfgInitialize, Status_SelfTest, Status_SetOptions;
+  unsigned int Count;
+  unsigned char Test;
+  XSpi_Config *ConfigPtr; /* Pointer to Configuration data */
+
+
+  /* Initalize SPI device driver */
+  ConfigPtr = XSpi_LookupConfig(XPAR_SPI_0_DEVICE_ID);
+  configASSERT(ConfigPtr != NULL);
+
+  Status_CfgInitialize = XSpi_CfgInitialize(&SpiInstance, ConfigPtr,
+          ConfigPtr->BaseAddress);
+  configASSERT(Status_CfgInitialize == XST_SUCCESS);
+
+  /* Perform a self-test to ensure hardware was built correctly */
+  Status_SelfTest = XSpi_SelfTest(&SpiInstance);
+  configASSERT(Status_SelfTest == XST_SUCCESS);
+
+  /* Set device to master mode and loopback mode */
+  Status_SetOptions = XSpi_SetOptions(&SpiInstance, XSP_MASTER_OPTION |
+          XSP_LOOPBACK_OPTION);
+  configASSERT(Status_SetOptions == XST_SUCCESS);
+
+  /* Start the SPI driver so that the device is enabled */
+  XSpi_Start(&SpiInstance);
+
+  /* Disable Global interrupt to use polled mode operation */
+  XSpi_IntrGlobalDisable(&SpiInstance);
+
+  /* Put data in write buffer, initialize read buffer to zero */
+  Test = 0x10;
+  for (Count = 0; Count < BUFFER_SIZE; Count++) {
+    WriteBuffer[Count] = (char) (Count + Test);
+    ReadBuffer[Count] = 0;
+  }
+  
+  /* Transmit the data */
+  XSpi_Transfer(&SpiInstance, WriteBuffer, ReadBuffer, BUFFER_SIZE);
+
+  /* Compare received data with transmitted data */
+  for (Count = 0; Count < BUFFER_SIZE; Count++) {
+    configASSERT(WriteBuffer[Count] == ReadBuffer[Count]);
+  }
+
+  vTaskDelete(NULL);
+
 }
 
 // void vTestSPISD( void *pvParameters )
