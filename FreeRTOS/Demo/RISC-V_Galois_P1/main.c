@@ -51,6 +51,9 @@
 #elif mainDEMO_TYPE == 5
 	#pragma message "Demo type 5: SPI test"
 	extern void main_spi( void );
+#elif mainDEMO_TYPE == 6
+	#pragma message "Demo type 6: Drivers"
+	extern void main_drivers( void );
 #else
 	#error "Unsupported demo type"
 #endif
@@ -79,8 +82,6 @@ int main( void )
 {
 	prvSetupHardware();
 
-	/* The mainCREATE_SIMPLE_BLINKY_DEMO_ONLY setting is described at the top
-	of this file. */
 	#if mainDEMO_TYPE == 1
 	{
 		main_blinky();
@@ -101,6 +102,10 @@ int main( void )
 	{
 		main_spi();
 	}
+	#elif mainDEMO_TYPE == 6
+	{
+		main_drivers();
+	}
 	#endif
 }
 /*-----------------------------------------------------------*/
@@ -108,8 +113,6 @@ int main( void )
 static void prvSetupHardware( void )
 {
 	uart0_init();
- 	//PLIC_init();
- 	//UART_init( &g_uart, COREUARTAPB0_BASE_ADDR, BAUD_VALUE_115200, ( DATA_8_BITS | NO_PARITY ) );
 }
 /*-----------------------------------------------------------*/
 

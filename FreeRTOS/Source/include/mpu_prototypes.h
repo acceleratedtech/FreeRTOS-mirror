@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel V10.1.1
- * Copyright (C) 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V10.2.0
+ * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -69,6 +69,7 @@ void * MPU_pvTaskGetThreadLocalStoragePointer( TaskHandle_t xTaskToQuery, BaseTy
 BaseType_t MPU_xTaskCallApplicationTaskHook( TaskHandle_t xTask, void *pvParameter );
 TaskHandle_t MPU_xTaskGetIdleTaskHandle( void );
 UBaseType_t MPU_uxTaskGetSystemState( TaskStatus_t * const pxTaskStatusArray, const UBaseType_t uxArraySize, uint32_t * const pulTotalRunTime );
+TickType_t MPU_xTaskGetIdleRunTimeCounter( void );
 void MPU_vTaskList( char * pcWriteBuffer );
 void MPU_vTaskGetRunTimeStats( char *pcWriteBuffer );
 BaseType_t MPU_xTaskGenericNotify( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction, uint32_t *pulPreviousNotificationValue );

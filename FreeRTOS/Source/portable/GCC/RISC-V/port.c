@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel V10.1.1
- * Copyright (C) 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V10.2.0
+ * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,6 +34,10 @@
 #include "task.h"
 #include "portmacro.h"
 
+#ifndef configCLINT_BASE_ADDRESS
+	#warning configCLINT_BASE_ADDRESS must be defined in FreeRTOSConfig.h.  If the target chip includes a Core Local Interrupter (CLINT) then set configCLINT_BASE_ADDRESS to the CLINT base address.  Otherwise set configCLINT_BASE_ADDRESS to 0.
+#endif
+
 /* Let the user override the pre-loading of the initial LR with the address of
 prvTaskExitError() in case it messes up unwinding of the stack in the
 debugger. */
@@ -64,11 +68,6 @@ interrupt stack after the scheduler has started. */
  * generate the tick interrupt.
  */
 void vPortSetupTimerInterrupt( void ) __attribute__(( weak ));
-
-/*
- * Used to catch tasks that attempt to return from their implementing function.
- */
-static void prvTaskExitError( void );
 
 /*-----------------------------------------------------------*/
 
@@ -102,22 +101,6 @@ task stack, not the ISR stack). */
 	#define portCHECK_ISR_STACK()
 #endif /* configCHECK_FOR_STACK_OVERFLOW > 2 */
 
-/*-----------------------------------------------------------*/
-
-static void prvTaskExitError( void )
-{
-volatile uint32_t ulx = 0;
-#warning Not currently used
-	/* A function that implements a task must not exit or attempt to return to
-	its caller as there is nothing to return to.  If a task wants to exit it
-	should instead call vTaskDelete( NULL ).
-
-	Artificially force an assert() to be triggered if configASSERT() is
-	defined, then stop here so application writers can catch the error. */
-	configASSERT( ulx == ~0UL );
-	portDISABLE_INTERRUPTS();
-	for( ;; );
-}
 /*-----------------------------------------------------------*/
 
 #if( configCLINT_BASE_ADDRESS != 0 )

@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel V10.1.1
- * Copyright (C) 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V10.2.0
+ * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -329,6 +329,19 @@ BaseType_t xRunningPrivileged = xPortRaisePrivilege();
 
 		vTaskGetRunTimeStats( pcWriteBuffer );
 		vPortResetPrivilege( xRunningPrivileged );
+	}
+#endif
+/*-----------------------------------------------------------*/
+
+#if( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) )
+	TickType_t MPU_xTaskGetIdleRunTimeCounter( void )
+	{
+	TickType_t xReturn;
+	BaseType_t xRunningPrivileged = xPortRaisePrivilege();
+
+		xReturn = xTaskGetIdleRunTimeCounter();
+		vPortResetPrivilege( xRunningPrivileged );
+		return xReturn;
 	}
 #endif
 /*-----------------------------------------------------------*/

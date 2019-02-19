@@ -1,0 +1,10 @@
+#ifndef __XPARAMETERS_H
+#define __XPARAMETERS_H
+
+#define XPAR_XIIC_NUM_INSTANCES     1
+#define XPAR_IIC_0_DEVICE_ID 0
+#define XPAR_IIC_0_BASEADDR (0x62310000ULL)
+#define XPAR_IIC_0_TEN_BIT_ADR 0
+#define XPAR_IIC_0_GPO_WIDTH 32
+
+#endif

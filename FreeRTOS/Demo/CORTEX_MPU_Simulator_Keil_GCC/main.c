@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel V10.1.1
- * Copyright (C) 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V10.2.0
+ * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -776,6 +776,9 @@ static void prvTaskToDelete( void *pvParameters )
 	/* For code coverage test purposes it is deleted by the Idle task. */
 	configASSERT( uxTaskGetStackHighWaterMark( NULL ) > 0 );
 	configASSERT( uxTaskGetStackHighWaterMark2( NULL ) > 0 );
+	/* Run time stats are not being gathered - this is just to exercise
+	API. */
+	configASSERT( xTaskGetIdleRunTimeCounter() == 0 ); 
 	vTaskSuspend( NULL );
 }
 /*-----------------------------------------------------------*/

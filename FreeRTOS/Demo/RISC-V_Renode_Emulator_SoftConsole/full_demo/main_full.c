@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel V10.1.1
- * Copyright (C) 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel V10.2.0
+ * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -261,17 +261,17 @@ extern void vToggleLED( void );
 			pcStatusMessage = "ERROR: Dynamic priority demo/tests.\r\n";
 		}
 
-		if ( xAreBlockTimeTestTasksStillRunning() == pdFALSE )
+		if( xAreBlockTimeTestTasksStillRunning() == pdFALSE )
 		{
 			pcStatusMessage = "ERROR: Block time demo/tests.\r\n";
 		}
 
-		if ( xAreGenericQueueTasksStillRunning() == pdFALSE )
+		if( xAreGenericQueueTasksStillRunning() == pdFALSE )
 		{
 			pcStatusMessage = "ERROR: Generic queue demo/tests.\r\n";
 		}
 
-		if ( xAreRecursiveMutexTasksStillRunning() == pdFALSE )
+		if( xAreRecursiveMutexTasksStillRunning() == pdFALSE )
 		{
 			pcStatusMessage = "ERROR: Recursive mutex demo/tests.\r\n";
 		}

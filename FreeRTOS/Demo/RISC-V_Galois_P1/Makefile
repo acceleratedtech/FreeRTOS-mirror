@@ -61,8 +61,20 @@ APP_SRC =  \
 	$(APP_SOURCE_DIR)/StreamBufferInterrupt.c \
 	$(APP_SOURCE_DIR)/semtest.c
 
-PORT_SRC = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/port.c
-PORT_ASM = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/portASM.S
+PORT_SRC = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V/port.c
+PORT_ASM = $(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V/portASM.S
+
+INCLUDES = \
+	-I. \
+	-I./bsp \
+	-I$(FREERTOS_SOURCE_DIR)/include \
+	-I../Common/include \
+	-I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V
+
+ASFLAGS  += -g $(ARCH) $(ABI)  -Wa,-Ilegacy -I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V/chip_specific_extensions/RV32I_CLINT_no_extensions -DportasmHANDLE_INTERRUPT=external_interrupt_handler
+
+CFLAGS = $(WARNINGS) $(INCLUDES)
+CFLAGS += -O0 -g3 $(ARCH) $(ABI) -mcmodel=medany
 
 DEMO_SRC = main.c \
 	bsp/bsp.c \
@@ -75,9 +87,9 @@ INCLUDES = \
 	-I./bsp \
 	-I$(FREERTOS_SOURCE_DIR)/include \
 	-I../Common/include \
-	-I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32
+	-I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V
 
-ASFLAGS  += -g $(ARCH) $(ABI)  -Wa,-Ilegacy -I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V-RV32/chip_specific_extensions/RV32I_CLINT_no_extensions -DportasmHANDLE_INTERRUPT=external_interrupt_handler
+ASFLAGS  += -g $(ARCH) $(ABI)  -Wa,-Ilegacy -I$(FREERTOS_SOURCE_DIR)/portable/GCC/RISC-V/chip_specific_extensions/RV32I_CLINT_no_extensions -DportasmHANDLE_INTERRUPT=external_interrupt_handler
 
 CFLAGS = $(WARNINGS) $(INCLUDES)
 CFLAGS += -O0 -g3 $(ARCH) $(ABI) -mcmodel=medany
@@ -99,7 +111,24 @@ else
 ifeq ($(PROG),main_spi)
 	CFLAGS += -DmainDEMO_TYPE=5
 else
+ifeq ($(PROG),main_drivers)
+	CFLAGS += -DmainDEMO_TYPE=6
+	INCLUDES += \
+		-I./bsp/xilinx \
+		-I./bsp/xilinx/iic/src \
+		-I./bsp/xilinx/common
+	DEMO_SRC += \
+		./bsp/xilinx/iic/src/xiic.c \
+		./bsp/xilinx/iic/src/xiic_g.c \
+		./bsp/xilinx/iic/src/xiic_sinit.c \
+		./bsp/xilinx/iic/src/xiic_selftest.c \
+		./bsp/xilinx/common/xbasic_types.c \
+		./bsp/xilinx/common/xil_io.c \
+		./bsp/xilinx/common/xil_assert.c \
+		./bsp/xilinx/common/xiic_stats.c
+else
 	$(info unknown demo: $(PROG))
+endif
 endif
 endif
 endif
