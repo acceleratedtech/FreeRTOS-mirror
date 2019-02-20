@@ -78,6 +78,7 @@ CFLAGS += -O0 -g3 $(ARCH) $(ABI) -mcmodel=medany
 
 DEMO_SRC = main.c \
 	bsp/bsp.c \
+	bsp/plic_driver.c \
 	bsp/uart_16550.c \
 	bsp/syscalls.c \
 	demo/$(PROG).c
