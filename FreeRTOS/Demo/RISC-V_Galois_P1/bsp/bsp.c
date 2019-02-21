@@ -65,24 +65,8 @@ void external_interrupt_handler( uint32_t cause ) {
 
     plic_source src = PLIC_claim_interrupt(&Plic);
 
-    // this can be replaced by a vector table effectively
-    // int status = HandlerTable[src]();
-    switch(src) {
-        case PLIC_SOURCE_UART0:
-            // this is UART0
-            break;
-        case PLIC_SOURCE_UART1:
-            // call UART1 handler
-            break;
-        case PLIC_SOURCE_IIC:
-            // call iic handler
-            break;
-        case PLIC_SOURCE_SPI:
-            // call SPI handler
-            break;
-        default:
-            // unknown source
-            __asm volatile( "ebreak" );
+    if ((source_id >=1 ) && (source_id < PLIC_NUM_INTERRUPTS)) {
+        Plic.HandlerTable[source_id].Handler(Plic.HandlerTable[source_id].CallBackRef);
     }
 
     // TODO: check return status from the handlers
