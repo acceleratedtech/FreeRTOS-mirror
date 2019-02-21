@@ -1,6 +1,9 @@
 #include "bsp.h"
-#include "uart_16550.h"
+#include "xuartns550.h"
 #include "plic_driver.h"
+
+#include "FreeRTOS.h"
+#include <task.h>
 
 
 // to communicate with the debugger in spike
@@ -8,6 +11,7 @@ volatile uint64_t tohost __attribute__((aligned(64)));
 volatile uint64_t fromhost __attribute__((aligned(64)));
 
 plic_instance_t Plic;
+XUartNs550 Uart0;	/* Instance of the UART Device */
 
 void prvSetupHardware( void )
 {
@@ -22,12 +26,29 @@ void prvSetupHardware( void )
 
     // Enable external interrupts
     // TODO: the interrupts should be enabled from the peripherals
-    PLIC_enable_interrupt(&Plic,PLIC_SOURCE_UART0);
-    PLIC_enable_interrupt(&Plic,PLIC_SOURCE_UART1);
-    PLIC_enable_interrupt(&Plic,PLIC_SOURCE_IIC);
-    PLIC_enable_interrupt(&Plic,PLIC_SOURCE_SPI);
+    //PLIC_enable_interrupt(&Plic,PLIC_SOURCE_UART0);
+    //PLIC_enable_interrupt(&Plic,PLIC_SOURCE_UART1);
+    //PLIC_enable_interrupt(&Plic,PLIC_SOURCE_IIC);
+    //PLIC_enable_interrupt(&Plic,PLIC_SOURCE_SPI);
 
-	UART_init();
+    // Initialize UART0
+    int status;
+    status = XUartNs550_Initialize(&Uart0, 0);
+    configASSERT(status == 0);
+
+	//status = XUartNs550_SetOptions(&Uart0, XUN_OPTION_LOOPBACK);
+    //configASSERT(status == 0);
+
+    status = XUartNs550_SelfTest(&Uart0);
+    configASSERT(status == 0);
+
+    //uint8_t HelloWorld[] = "Hello World";
+	//uint8_t sent_cnt = 0;
+    //XUartNs550_Send(&Uart0, HelloWorld, sizeof(HelloWorld));
+
+    __asm volatile( "ebreak" );
+
+	//UART_init();
 	//I2C_init();
 	//SPI_init();
 	//GPIO_init();

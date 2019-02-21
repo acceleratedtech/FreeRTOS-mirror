@@ -1,6 +1,6 @@
 /******************************************************************************
 *
-* Copyright (C) 2002 - 2018 Xilinx, Inc.  All rights reserved.
+* Copyright (C) 2002 - 2015 Xilinx, Inc.  All rights reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -25,35 +25,35 @@
 * this Software without prior written authorization from Xilinx.
 *
 ******************************************************************************/
-/*****************************************************************************/
+/****************************************************************************/
 /**
 *
-* @file xiic_g.c
-* @addtogroup iic_v3_4
+* @file xuartns550_g.c
+* @addtogroup uartns550_v3_5
 * @{
 *
 * This file contains a configuration table that specifies the configuration of
-* IIC devices in the system. Each IIC device should have an entry in this table.
+* NS16550 devices in the system.
 *
 * <pre>
 * MODIFICATION HISTORY:
 *
 * Ver   Who  Date     Changes
-* ----- --- ------- -----------------------------------------------
-* 1.01a rfp  10/19/01 release
-* 1.01c ecm  12/05/02 new rev
-* 1.01d jhl  10/08/03 Added general purpose output feature
-* 1.13a wgr  03/22/07 Converted to new coding style.
+* ----- ---- -------- -----------------------------------------------
+* 1.00a ecm  08/16/01 First release
+* 1.00b jhl  03/11/02 Repartitioned driver for smaller files.
+* 1.11a sv   03/20/07 Updated to use the new coding guidelines.
 * </pre>
 *
 ******************************************************************************/
 
 /***************************** Include Files *********************************/
 
-#include "xiic.h"
+#include "xuartns550.h"
 #include "bsp.h"
 
 /************************** Constant Definitions *****************************/
+
 
 /**************************** Type Definitions *******************************/
 
@@ -64,17 +64,25 @@
 /************************** Function Prototypes ******************************/
 
 
-/************************** Variable Definitions *****************************/
+/************************** Variable Prototypes ******************************/
+
 /**
- * The IIC configuration table, sized by the number of instances
- * defined in xparameters.h.
+ * The configuration table for UART 16550/16450 devices in the table. Each
+ * device should have an entry in this table.
  */
-XIic_Config XIic_ConfigTable[XPAR_XIIC_NUM_INSTANCES] = {
+XUartNs550_Config XUartNs550_ConfigTable[] =
+{
 	{
-	 XPAR_IIC_0_DEVICE_ID,	/* Device ID for instance */
-	 XPAR_IIC_0_BASEADDR,	/* Base address */
-	 XPAR_IIC_0_TEN_BIT_ADR,/* Uses 10 bit addressing */
-	 XPAR_IIC_0_GPO_WIDTH	/* Number of bits in GPO register */
+		XPAR_UARTNS550_0_DEVICE_ID,
+		XPAR_UARTNS550_0_BASEADDR,
+		XPAR_UARTNS550_0_CLOCK_HZ,
+		XPAR_DEFAULT_BAUD_RATE
+	},
+	{
+		XPAR_UARTNS550_1_DEVICE_ID,
+		XPAR_UARTNS550_1_BASEADDR,
+		XPAR_UARTNS550_1_CLOCK_HZ,
+		XPAR_DEFAULT_BAUD_RATE
 	}
 };
 /** @} */

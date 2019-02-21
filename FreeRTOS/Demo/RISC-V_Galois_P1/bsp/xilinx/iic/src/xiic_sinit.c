@@ -54,7 +54,7 @@
 /***************************** Include Files *******************************/
 
 #include "xstatus.h"
-#include "xparameters.h"
+#include "bsp.h"
 #include "xiic_i.h"
 
 /************************** Constant Definitions ***************************/

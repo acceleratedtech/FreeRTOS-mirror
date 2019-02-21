@@ -2,7 +2,10 @@
 #include <sys/stat.h>
 #include <sys/times.h>
 #include <sys/time.h>
-#include "uart_16550.h"
+
+// Board includes
+#include "xuartns550.h"
+extern XUartNs550 Uart0;
 
 void* _sbrk (int nbytes);
 int _write(int file, char *ptr, int len);
@@ -22,11 +25,8 @@ void* _sbrk (int nbytes)
 }
 
 int _write(int file, char *ptr, int len) {
-  int todo;
   (void)file;
-  for (todo = 0; todo < len; todo++) {
-    UART_txchar (*ptr++);
-  }
+  //XUartNs550_Send(&Uart0, (uint8_t*)ptr, len);
   return len;
 }
 
