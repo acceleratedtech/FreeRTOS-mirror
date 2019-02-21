@@ -85,7 +85,10 @@ plic_source PLIC_claim_interrupt(plic_instance_t * this_plic);
 void PLIC_complete_interrupt(plic_instance_t * this_plic,
 			     plic_source source);
 
-plic_source PLIC_register_interrupt_handler(plic_instance_t * this_plic, plic_source source_id, plic_interrupt_handler_t handler, void *CallBackRef);
+plic_source PLIC_register_interrupt_handler(plic_instance_t * this_plic,
+                                            plic_source source_id,
+                                            plic_interrupt_handler_t handler,
+                                            void *CallBackRef);
 
 void PLIC_unregister_interrupt_handler(plic_instance_t * this_plic, plic_source source_id);
 

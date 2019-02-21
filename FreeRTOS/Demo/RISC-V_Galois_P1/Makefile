@@ -61,6 +61,7 @@ DEMO_SRC = main.c \
 	bsp/bsp.c \
 	bsp/plic_driver.c \
 	bsp/syscalls.c \
+	bsp/uart_16550.c \
 	demo/$(PROG).c \
 	bsp/xilinx/uartns550/src/xuartns550.c \
 	bsp/xilinx/uartns550/src/xuartns550_g.c \
@@ -72,6 +73,8 @@ DEMO_SRC = main.c \
 	bsp/xilinx/iic/src/xiic_g.c \
 	bsp/xilinx/iic/src/xiic_sinit.c \
 	bsp/xilinx/iic/src/xiic_selftest.c \
+	bsp/xilinx/iic/src/xiic_master.c \
+	bsp/xilinx/iic/src/xiic_intr.c \
 	bsp/xilinx/common/xbasic_types.c \
 	bsp/xilinx/common/xil_io.c \
 	bsp/xilinx/common/xil_assert.c \

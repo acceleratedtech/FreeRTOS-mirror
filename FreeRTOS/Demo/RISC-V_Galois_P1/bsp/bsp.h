@@ -2,6 +2,7 @@
 #define RISCV_BLUESPEC_BSP_H
 
 #include "stdint.h"
+#include "plic_driver.h"
 
 // PLIC defines
 #define PLIC_BASE_ADDR (0xC000000ULL)
@@ -36,6 +37,8 @@
 #define XPAR_UARTNS550_1_DEVICE_ID 1
 #define XPAR_UARTNS550_1_BASEADDR 0x62340000ULL
 #define XPAR_UARTNS550_1_CLOCK_HZ UART_CLOCK_RATE
+
+extern plic_instance_t Plic;
 
 /* Prepare haredware to run the demo. */
 void prvSetupHardware( void );
