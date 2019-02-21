@@ -2,6 +2,8 @@
 #include <sys/stat.h>
 #include <sys/times.h>
 #include <sys/time.h>
+
+// Board includes
 #include "uart_16550.h"
 
 void* _sbrk (int nbytes);
@@ -22,9 +24,9 @@ void* _sbrk (int nbytes)
 }
 
 int _write(int file, char *ptr, int len) {
-  int todo;
   (void)file;
-  for (todo = 0; todo < len; todo++) {
+  int cnt;
+  for (cnt = 0; cnt < len; cnt++) {
     uart0_txchar (*ptr++);
   }
   return len;

@@ -30,7 +30,7 @@
 #include <task.h>
 
 /* Bsp includes. */
-#include "uart_16550.h"
+#include "bsp.h"
 
 /******************************************************************************
  * This project provides test applications for Galois P1 SSITH processor.
@@ -64,9 +64,6 @@ void vApplicationMallocFailedHook( void );
 void vApplicationIdleHook( void );
 void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName );
 void vApplicationTickHook( void );
-
-/* Prepare haredware to run the demo. */
-static void prvSetupHardware( void );
 
 void vToggleLED( void );
 
@@ -108,12 +105,7 @@ int main( void )
 	}
 	#endif
 }
-/*-----------------------------------------------------------*/
 
-static void prvSetupHardware( void )
-{
-	uart0_init();
-}
 /*-----------------------------------------------------------*/
 
 // TODO: toggle a real LED at some point
