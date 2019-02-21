@@ -55,17 +55,17 @@
 #include "uart_16550.h"
 
 /* Xilinx driver includes */
-#include "xparameters.h"
 #include "xspi.h"
+#include "bsp.h"
+#include "plic_driver.h"
 
 #define BUFFER_SIZE 16
 
-#define SPI_SRR (*(unsigned int *) 0x62320040)
-#define SPICR (*(unsigned int *) 0x62320060)
-#define SPISR (*(unsigned int *) 0x62320064)
-#define SPI_DTR (*(unsigned int *) 0x62320068)
-#define SPI_DRR (*(unsigned int *) 0x6232006c)
-#define SPI_SSR (*(unsigned int *) 0x62320070)
+/* Indicates whether transfer in progress based on interrupts */
+volatile int TransferInProgress;
+
+/* Track errors that occur during interrupt processing */
+int Error;
 
 /*-----------------------------------------------------------*/
 
@@ -77,9 +77,15 @@ void main_spi( void );
 /*
  * The tasks as described in the comments at the top of this file.
  */
-static void vTestSPI( void *pvParameters );
 
 static void vTestXilinxSPI( void *pvParameters );
+
+static void vTestXilinxSPIInterrupts( void *pvParameters );
+
+/* Interrupt functions */
+static int SpiSetupIntrSystem(XSpi *SpiPtr);
+
+static void SpiStatusHandler(void *CallBackRef, int StatusEvent, int ByteCount);
 
 /*-----------------------------------------------------------*/
 
@@ -87,7 +93,7 @@ void main_spi( void )
 {
 	/* Create SPI test */
 	// xTaskCreate( vTestSPI, "SPI Test", 1000, NULL, 0, NULL );
-  xTaskCreate( vTestXilinxSPI, "Xilinx SPI Test", 1000, NULL, 0, NULL );
+  xTaskCreate( vTestXilinxSPIInterrupts, "Xilinx SPI Test Interrupts", 1000, NULL, 0, NULL );
 
 	/* Start the kernel.  From here on, only tasks and interrupts will run. */
 	vTaskStartScheduler();
@@ -100,61 +106,7 @@ void main_spi( void )
 	http://www.freertos.org/a00111.html. */
 	for( ;; );
 }
-/*-----------------------------------------------------------*/
 
-void vTestSPI( void *pvParameters )
-{
-	/* vTestSPI() tests the AXI SPI on the VCU118 in 
-  loopback mode */
-
-  (void) pvParameters;
-
-  char spi_rx0;
-  char spi_rx1;
-  char spi_rx2;
-
-  /***** INIT *****/
-  /* Software reset */
-  SPI_SRR = 0xa;
-
-  /* Set to Master mode */
-  SPICR |= 0x4;
-
-  /* Enable loopback mode (LOOP) */
-  SPICR |= 0x1;
-
-	/***** TRANSMIT *****/
-	/* Inhibit master */
-  SPICR |= 0x100;
-
-  /* Write data to data transmit register */
-  SPI_DTR = 'a';
-  SPI_DTR = 'b';
-  SPI_DTR = 'c';
-
-  /* SPI system enable (SPE) */
-  SPICR |= 0x2;
-
-  /* Deinhibit master */
-  SPICR &= ~(0x100);
-
-  /* Wait until TX is empty */
-  while ( (SPISR & 0x4) == 0 )
-     ; // wait
-
-  /* While RX empty is true, wait */
-  while ( (SPISR & 0x1) != 0 )
-     ; // wait
-
-  /* Receive and print out */
-  spi_rx0 = (char) SPI_DRR;
-  spi_rx1 = (char) SPI_DRR;
-  spi_rx2 = (char) SPI_DRR;
-
-  printf( "Received: %c %c %c \n", spi_rx0, spi_rx1, spi_rx2);
-
-  vTaskDelete( NULL );
-}
 
 /*-----------------------------------------------------------*/
 /* Instance of Spi device */
@@ -163,6 +115,75 @@ static XSpi SpiInstance;
 /* Buffers used to read and write to SPI device */
 unsigned char ReadBuffer[BUFFER_SIZE];
 unsigned char WriteBuffer[BUFFER_SIZE];
+
+void vTestXilinxSPIInterrupts( void *pvParameters )
+{
+
+  /* Testing Xilinx SPI driver and interrupts using LCD */
+
+  (void) pvParameters;
+
+  int Status_CfgInitialize, Status_SetOptions, Status_SetupIntrSystem;
+  unsigned int Count;
+  unsigned char Test;
+  XSpi_Config *ConfigPtr; /* Pointer to Configuration data */
+
+  /* Initalize SPI device driver */
+  ConfigPtr = XSpi_LookupConfig(XPAR_SPI_0_DEVICE_ID);
+  configASSERT(ConfigPtr != NULL);
+
+  Status_CfgInitialize = XSpi_CfgInitialize(&SpiInstance, ConfigPtr,
+          ConfigPtr->BaseAddress);
+  configASSERT(Status_CfgInitialize == XST_SUCCESS);
+
+  /* Setup interrupt system */
+  Status_SetupIntrSystem = SpiSetupIntrSystem(&SpiInstance);
+  configASSERT(Status_SetupIntrSystem == XST_SUCCESS);
+
+  /* Setup SPI status handler to indicate that SpiIntrHandler
+  should be called when there is an interrupt (doesn't PLIC table do this?) */
+  XSpi_SetStatusHandler(&SpiInstance, &SpiInstance, 
+          (XSpi_StatusHandler) SpiStatusHandler);
+
+  /* Set device to master mode and loopback mode */
+  Status_SetOptions = XSpi_SetOptions(&SpiInstance, XSP_MASTER_OPTION |
+          XSP_LOOPBACK_OPTION);
+  configASSERT(Status_SetOptions == XST_SUCCESS);
+
+  /* Start the SPI driver so that the device and interrupts are enabled */
+  XSpi_Start(&SpiInstance);
+
+  /* Put data to send in write buffer, initialize read buffer to zero */
+  Test = 0x10;
+  for (Count = 0; Count < BUFFER_SIZE; Count++) {
+    WriteBuffer[Count] = (char) (Count + Test);
+    ReadBuffer[Count] = 0;
+  }
+
+  /* To receive confirmation that buffers contain same data */
+  printf("WriteBuffer[3] is %d\n", WriteBuffer[3]);
+  
+  /* Transmit the data */
+  TransferInProgress = TRUE;
+  XSpi_Transfer(&SpiInstance, WriteBuffer, ReadBuffer, BUFFER_SIZE);
+
+  /* Wait for transfer to finish */
+  while (TransferInProgress) {
+  }
+
+  /* Compare received data with transmitted data */
+  for (Count = 0; Count < BUFFER_SIZE; Count++) {
+    configASSERT(WriteBuffer[Count] == ReadBuffer[Count]);
+  }
+
+  /* To receive confirmation that buffers contain same data */
+  printf("ReaderBuffer[3] is %d\n", ReadBuffer[3]);
+
+  vTaskDelete(NULL);
+
+}
+
+/*-----------------------------------------------------------*/
 
 void vTestXilinxSPI( void *pvParameters )
 {
@@ -216,102 +237,38 @@ void vTestXilinxSPI( void *pvParameters )
 
 }
 
-// void vTestSPISD( void *pvParameters )
-// {
-// 	/* vTestSPISD() tests writing to an SD card using AXI SPI and a
-// 	Digilent PMOD SD connector */
+/*-----------------------------------------------------------*/
 
-// 	/***** INIT *****/
-// 	/* Software reset */
-// 	SPI_SRR = 0xa;
+static int SpiSetupIntrSystem(XSpi *SpiPtr)
+{
+  int Status;
 
-// 	/* Set to Master mode */
-// 	SPICR |= 0x4;
+  /*
+   * Connect a device driver handler that will be called when an interrupt
+   * for the device occurs, the device driver handler performs the
+   * specific interrupt processing for the device
+   */
+  Status = PLIC_register_interrupt_handler(&Plic, PLIC_SOURCE_SPI,
+          XSpi_InterruptHandler, SpiPtr);
+  if (Status != PLIC_SOURCE_SPI) {
+    return XST_FAILURE;
+  }
 
-// 	/* Set CPHA=0, CPOL=0 */
-// 	SPI_CR &= ~(0x18);
+  return XST_SUCCESS;
 
-// 	/***** Set SD card to SPI mode *****/
-// 	/* Need to set to SPI mode first? */
-
-// 	/* Send CMD0 (GO_IDLE_STATE) and assert chip select */
-// 	/* Inhibit master */
-// 	SPICR |= 0x100;
-
-// 	/* Write CMD0 (reset) to data transmit register */
-// 	/* Needs CRC value? */
-// 	SPI_DTR = 00000000;
-
-// 	/* SPI system enable (SPE) */
-// 	SPICR |= 0x2;
-
-// 	/* Assert chip select */
-// 	SPI_SSR &= 0;
-
-// 	/* Deinhibit master */
-// 	SPICR &= ~(0x100);
-
-// 	/* Deassert chip select */
-// 	SPI_SSR |= 1;
-
-// 	/* Inhibit master */
-// 	SPICR |= 0x100;
-
-// 	/* Check for R1 response? */
-
-// 	 Initiate initialization process w/ CMD1 (or ACDM41?) 
-
-// 	/* Check response until end of initialization */
-
-// 	/* R1 resp should change from 0x01 to 0x00 */
-
-// 	/* Send CMD8 (SEND_IF_COND) */
-	
-
-// 	/***** WRITE *****/
-// 	/* Inhibit master */
-// 	SPICR |= 0x100;
-
-// 	/* Write data to data transmit register */
-// 	SPI_DTR = 'h';
-// 	SPI_DTR = 'e';
-// 	SPI_DTR = 'l';
-// 	SPI_DTR = 'l';
-// 	SPI_DTR = 'o';
-// 	SPI_DTR = '!';
-
-// 	/* SPI system enable (SPE) */
-// 	SPICR |= 0x2;
-
-// 	/* Assert chip select */
-// 	SPI_SSR &= 0;
-
-// 	/* Deinhibit master */
-// 	SPICR &= ~(0x100);
-
-// 	/* Deassert chip select */
-// 	SPI_SSR |= 1;
-
-// 	/* Inhibit master */
-// 	SPICR |= 0x100;
-
-// 	/***** READ *****/
-// 	/* Send read data command (and address) to SD card */
-
-// 	/* Assert chip select */
-// 	SPI_SSR &= 0;
-
-// 	/* Deinhibit master */
-// 	SPICR &= ~(0x100);
-
-// 	/* Deassert chip select */
-// 	SPI_SSR |= 1;
-
-// 	/* Inhibit master */
-// 	SPICR |= 0x100;
-
-// 	/* Read data read register */
-
-// }
+}
 
 /*-----------------------------------------------------------*/
+
+static void SpiStatusHandler(void *CallBackRef, int StatusEvent, int ByteCount)
+{
+  (void) CallBackRef;
+
+  /* Indicate transfer no longer in progress */
+  TransferInProgress = FALSE;
+
+  /* If event was not transfer done, track it as an error */
+  if (StatusEvent != XST_SPI_TRANSFER_DONE) {
+    Error++;
+  }
+}

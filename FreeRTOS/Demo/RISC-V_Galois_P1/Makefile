@@ -140,10 +140,7 @@ ifeq ($(PROG),main_spi)
 		./bsp/xilinx/spi/src/xspi_g.c \
 		./bsp/xilinx/spi/src/xspi_sinit.c \
 		./bsp/xilinx/spi/src/xspi_selftest.c \
-		./bsp/xilinx/spi/src/xspi_options.c \
-		./bsp/xilinx/common/xbasic_types.c \
-		./bsp/xilinx/common/xil_io.c \
-		./bsp/xilinx/common/xil_assert.c
+		./bsp/xilinx/spi/src/xspi_options.c
 else
 ifeq ($(PROG),main_drivers)
 	CFLAGS += -DmainDEMO_TYPE=6

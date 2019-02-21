@@ -57,7 +57,8 @@
 
 /***************************** Include Files *********************************/
 #include "xspi.h"
-#include "xparameters.h"
+// #include "xparameters.h"
+#include "bsp.h"
 
 /************************** Constant Definitions *****************************/
 
