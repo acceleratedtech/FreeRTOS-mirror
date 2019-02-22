@@ -1,8 +1,7 @@
-
 #ifndef __UART_16550_H__
 #define __UART_16550_H__
 
-#define UART_BASE (0x62300000ULL)
+#define UART0_BASE (0x62300000ULL)
 #define UART1_BASE (0x62340000ULL)
 #define UART_CLOCK_RATE  (83000000ULL) // 83MHz
 #define DEFAULT_BAUDRATE  (9600)
@@ -94,10 +93,16 @@ enum __attribute__ ((__packed__)) msr_t
   MSR_DCD = 0x80,
 };
 
-int UART_rxready(void);
-int UART_rxchar(void);
-int UART_txchar(int c);
-void UART_flush(void);
-int UART_init(void);
+int uart0_rxready(void);
+int uart0_rxchar(void);
+int uart0_txchar(int c);
+void uart0_flush(void);
+int uart0_init(void);
+
+int uart1_rxready(void);
+int uart1_rxchar(void);
+int uart1_txchar(int c);
+void uart1_flush(void);
+int uart1_init(void);
 
 #endif

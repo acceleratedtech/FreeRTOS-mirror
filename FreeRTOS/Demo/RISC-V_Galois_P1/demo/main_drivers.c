@@ -67,6 +67,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 /* Kernel includes. */
 #include "FreeRTOS.h"
@@ -77,6 +78,8 @@
 #include "xiic.h"
 #include "plic_driver.h"
 #include "bsp.h"
+#include "uart_16550.h"
+#include "xuartns550.h"
 
 /* Priorities used by the tasks. */
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
@@ -105,8 +108,6 @@ void main_drivers( void );
 /*
  * The tasks as described in the comments at the top of this file.
  */
-static void prvQueueReceiveTask( void *pvParameters );
-static void prvQueueSendTask( void *pvParameters );
 static void prvIicTestTask( void *pvParameters );
 
 /*-----------------------------------------------------------*/
@@ -123,17 +124,6 @@ void main_drivers( void )
 
 	if( xQueue != NULL )
 	{
-		/* Start the two tasks as described in the comments at the top of this
-		file. */
-		xTaskCreate( prvQueueReceiveTask,				/* The function that implements the task. */
-					"Rx", 								/* The text name assigned to the task - for debug only as it is not used by the kernel. */
-					configMINIMAL_STACK_SIZE * 2U, 			/* The size of the stack to allocate to the task. */
-					NULL, 								/* The parameter passed to the task - not used in this case. */
-					mainQUEUE_RECEIVE_TASK_PRIORITY, 	/* The priority assigned to the task. */
-					NULL );								/* The task handle is not required, so NULL is passed. */
-
-		xTaskCreate( prvQueueSendTask, "TX", configMINIMAL_STACK_SIZE * 2U, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
-
 		xTaskCreate( prvIicTestTask, "IIC_test_task", configMINIMAL_STACK_SIZE * 2U, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
 
 		/* Start the tasks and timer running. */
@@ -150,45 +140,32 @@ void main_drivers( void )
 }
 /*-----------------------------------------------------------*/
 
-static void prvQueueSendTask( void *pvParameters )
-{
-TickType_t xNextWakeTime;
-const unsigned long ulValueToSend = 100UL;
-BaseType_t xReturned;
-
-	unsigned int cnt = 0;
-
-	/* Remove compiler warning about unused parameter. */
-	( void ) pvParameters;
-
-	/* Initialise xNextWakeTime - this only needs to be done once. */
-	xNextWakeTime = xTaskGetTickCount();
-
-	for( ;; )
-	{
-		printf("[%u]: Hello from TX\r\n",cnt);
-		cnt++;
-		
-		/* Place this task in the blocked state until it is time to run again. */
-		vTaskDelayUntil( &xNextWakeTime, mainQUEUE_SEND_FREQUENCY_MS );
-
-		printf("[%u] TX: awoken\r\n",cnt);
-
-		/* Send to the queue - causing the queue receive task to unblock and
-		toggle the LED.  0 is used as the block time so the sending operation
-		will not block - it shouldn't need to block as the queue should always
-		be empty at this point in the code. */
-		xReturned = xQueueSend( xQueue, &ulValueToSend, 0U );
-		configASSERT( xReturned == pdPASS );
-		printf("[%u] TX: sent\r\n",cnt);
-	}
-}
-/*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
-#define TEMP_SENSOR_ADDRESS	0x18 /* The actual address is 0x30 */
 #define IIC_DEVICE_ID 0
 
+// the i2c address
+#define VCNL4010_I2CADDR_DEFAULT 0x13
+
+// commands and constants
+#define VCNL4010_COMMAND 0x80
+#define VCNL4010_PRODUCTID 0x81
+#define VCNL4010_PROXRATE 0x82
+#define VCNL4010_IRLED 0x83
+#define VCNL4010_AMBIENTPARAMETER 0x84
+#define VCNL4010_AMBIENTDATA 0x85
+#define VCNL4010_PROXIMITYDATA 0x87
+#define VCNL4010_INTCONTROL 0x89
+#define VCNL4010_PROXINITYADJUST 0x8A
+#define VCNL4010_INTSTAT 0x8E
+#define VCNL4010_MODTIMING 0x8F
+
+#define VCNL4010_MEASUREAMBIENT 0x10
+#define VCNL4010_MEASUREPROXIMITY 0x08
+#define VCNL4010_AMBIENTREADY 0x40
+#define VCNL4010_PROXIMITYREADY 0x20
+
+#define VCNL4010_16_625 3
 /*
  * The following structure contains fields that are used with the callbacks
  * (handlers) of the IIC driver. The driver asynchronously calls handlers
@@ -200,65 +177,106 @@ volatile struct {
 	int  RemainingRecvBytes;
 	int EventStatusUpdated;
 	int RecvBytesUpdated;
+	int TransmitComplete;
 } HandlerInfo;
 
 XIic Iic; /* The driver instance for IIC Device */
 
-int TempSensorExample(u16 IicDeviceId, u8 TempSensorAddress, u8 *TemperaturePtr);
+int TempSensorExample(u16 IicDeviceId);
 static int SetupInterruptSystem(XIic *IicPtr);
 static void RecvHandler(void *CallbackRef, int ByteCount);
+static void SendHandler(void *CallbackRef, int ByteCount);
 static void StatusHandler(void *CallbackRef, int Status);
+
+static bool vcnl4010_init(XIic *InstancePtr);
+static uint16_t vcnl4010_readProximity(XIic *InstancePtr);
+static uint16_t vcnl4010_readAmbient(XIic *InstancePtr);
+static void vcnl4010_write_u8(XIic *InstancePtr, uint8_t addr, uint8_t values);
+static uint8_t vcnl4010_read_u8(XIic *InstancePtr, uint8_t addr);
+static uint8_t vcnl4010_read_u16(XIic *InstancePtr, uint8_t addr);
 /*-----------------------------------------------------------*/
 
-/*-----------------------------------------------------------*/
-static void prvQueueReceiveTask( void *pvParameters )
-{
-unsigned long ulReceivedValue;
-const unsigned long ulExpectedValue = 100UL;
-extern void vToggleLED( void );
+static uint16_t vcnl4010_readProximity(XIic *InstancePtr) {
+  uint8_t i = vcnl4010_read_u8(InstancePtr, VCNL4010_INTSTAT);
+  i &= ~0x80;
+  vcnl4010_write_u8(InstancePtr, VCNL4010_INTSTAT, i);
 
-	unsigned int cnt = 0;
-	
-	/* Remove compiler warning about unused parameter. */
-	( void ) pvParameters;
-
-	for( ;; )
-	{
-		printf("[%u]: Hello from RX\r\n", cnt);
-		cnt++;
-
-		/* Wait until something arrives in the queue - this task will block
-		indefinitely provided INCLUDE_vTaskSuspend is set to 1 in
-		FreeRTOSConfig.h. */
-		xQueueReceive( xQueue, &ulReceivedValue, portMAX_DELAY );
-
-		printf("[%u] RX: received value\r\n",cnt);
-
-		/*  To get here something must have been received from the queue, but
-		is it the expected value?  If it is, toggle the LED. */
-		if( ulReceivedValue == ulExpectedValue )
-		{
-			printf("Blink !!!\r\n");
-			// TODO: blink a real LED at some point
-			vToggleLED();
-			ulReceivedValue = 0U;
-		}
-		else
-		{
-			printf("Unexpected value received\r\n");
-		}
-	}
+  vcnl4010_write_u8(InstancePtr, VCNL4010_COMMAND, VCNL4010_MEASUREPROXIMITY);
+  while (1) {
+    //Serial.println(read8(VCNL4010_INTSTAT), HEX);
+    uint8_t result = vcnl4010_read_u8(InstancePtr, VCNL4010_COMMAND);
+    //Serial.print("Ready = 0x"); Serial.println(result, HEX);
+    if (result & VCNL4010_PROXIMITYREADY) {
+      return vcnl4010_read_u16(InstancePtr, VCNL4010_PROXIMITYDATA);
+    }
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
 }
-/*-----------------------------------------------------------*/
+
+static uint16_t vcnl4010_readAmbient(XIic *InstancePtr) {
+  uint8_t i = vcnl4010_read_u8(InstancePtr, VCNL4010_INTSTAT);
+  i &= ~0x40;
+  vcnl4010_write_u8(InstancePtr, VCNL4010_INTSTAT, i);
+  vcnl4010_write_u8(InstancePtr, VCNL4010_COMMAND, VCNL4010_MEASUREAMBIENT);
+  while (1) {
+	//printf("Read VCNL4010_INTSTAT: %u\r\n", vcnl4010_read_u8(InstancePtr, VCNL4010_INTSTAT));
+    uint8_t result = vcnl4010_read_u8(InstancePtr, VCNL4010_COMMAND);
+	//printf("Ready: %u\r\n",result);
+    if (result & VCNL4010_AMBIENTREADY) {
+      return vcnl4010_read_u16(InstancePtr, VCNL4010_AMBIENTDATA);
+    }
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
+}
+
+static void vcnl4010_write_u8(XIic *InstancePtr, uint8_t addr, uint8_t values) {
+	uint8_t data[2] = {addr, values};
+	(void)XIic_MasterSend(InstancePtr, data, 2);
+	vTaskDelay(pdMS_TO_TICKS(20));
+}
+
+static uint8_t vcnl4010_read_u16(XIic *InstancePtr, uint8_t addr) {
+	uint8_t data[2] = {0};
+	data[0] = addr;
+	(void)XIic_MasterSend(InstancePtr, data, 1);
+	vTaskDelay(pdMS_TO_TICKS(10));
+	(void)XIic_MasterRecv(InstancePtr, data, 2);
+	vTaskDelay(pdMS_TO_TICKS(10)); 
+	return (uint16_t) (data[0] << 8 | data [1]);
+}
+
+static uint8_t vcnl4010_read_u8(XIic *InstancePtr, uint8_t addr) {
+	uint8_t data;
+	data = addr;
+	(void)XIic_MasterSend(InstancePtr, &data, 1);
+	vTaskDelay(pdMS_TO_TICKS(10)); // requires 170us delay
+  	(void)XIic_MasterRecv(InstancePtr, &data, 1);
+	vTaskDelay(pdMS_TO_TICKS(10));
+	return data;
+}
+
+bool vcnl4010_init(XIic *InstancePtr) {
+	XIic_SetAddress(InstancePtr, XII_ADDR_TO_SEND_TYPE, VCNL4010_I2CADDR_DEFAULT);
+
+	uint8_t rev = vcnl4010_read_u8(InstancePtr, VCNL4010_PRODUCTID);
+  	if ((rev & 0xF0) != 0x20) {
+    	return false;
+  	}
+
+	vcnl4010_write_u8(InstancePtr, VCNL4010_IRLED, 20);
+	vcnl4010_write_u8(InstancePtr, VCNL4010_MODTIMING, VCNL4010_16_625);
+
+	vcnl4010_write_u8(InstancePtr, VCNL4010_INTCONTROL, 0x08);
+	return true;
+}
 
 static void prvIicTestTask( void *pvParameters ) {
 	/* Remove compiler warning about unused parameter. */
 	( void ) pvParameters;
 
 	int status;
-	uint8_t TemperaturePtr;
-	status =  TempSensorExample(IIC_DEVICE_ID, TEMP_SENSOR_ADDRESS,
-							&TemperaturePtr);
+	printf("\r\nStarting IIC test task\r\n");
+	status =  TempSensorExample(IIC_DEVICE_ID);
 	configASSERT(status == 0);
 	printf("TempSensorExample returned\r\n");
 }
@@ -283,7 +301,7 @@ static void prvIicTestTask( void *pvParameters ) {
 * @note		None.
 *
 *******************************************************************************/
-int TempSensorExample(u16 IicDeviceId, u8 TempSensorAddress, u8 *TemperaturePtr)
+int TempSensorExample(u16 IicDeviceId)
 {
 	int Status;
 	static int Initialized = FALSE;
@@ -313,8 +331,8 @@ int TempSensorExample(u16 IicDeviceId, u8 TempSensorAddress, u8 *TemperaturePtr)
 		 * done prior to starting the device.
 		 */
 		XIic_SetRecvHandler(&Iic, (void *)&HandlerInfo, RecvHandler);
-		XIic_SetStatusHandler(&Iic, (void *)&HandlerInfo,
-						StatusHandler);
+		XIic_SetSendHandler(&Iic, (void *)&HandlerInfo, SendHandler);
+		XIic_SetStatusHandler(&Iic, (void *)&HandlerInfo, StatusHandler);
 
 		/*
 		 * Connect the ISR to the interrupt and enable interrupts.
@@ -330,62 +348,68 @@ int TempSensorExample(u16 IicDeviceId, u8 TempSensorAddress, u8 *TemperaturePtr)
 		 * to send to which is the temperature sensor address
 		 */
 		XIic_Start(&Iic);
-		XIic_SetAddress(&Iic, XII_ADDR_TO_SEND_TYPE, TempSensorAddress);
+		//XIic_SetAddress(&Iic, XII_ADDR_TO_SEND_TYPE, TempSensorAddress);
 	}
+	
+	printf("Initializing\r\n");
+	configASSERT(vcnl4010_init(&Iic) == TRUE);
 
-	/*
-	 * Clear updated flags such that they can be polled to indicate
-	 * when the handler information has changed asynchronously and
-	 * initialize the status which will be returned to a default value
-	 */
-	HandlerInfo.EventStatusUpdated = FALSE;
-	HandlerInfo.RecvBytesUpdated = FALSE;
-	Status = XST_FAILURE;
-
-	/*
-	 * Attempt to receive a byte of data from the temperature sensor
-	 * on the IIC interface, ignore the return value since this example is
-	 * a single master system such that the IIC bus should not ever be busy
-	 */
-	(void)XIic_MasterRecv(&Iic, TemperaturePtr, 1);
-
-	/*
-	 * The message is being received from the temperature sensor,
-	 * wait for it to complete by polling the information that is
-	 * updated asynchronously by interrupt processing
-	 */
 	while(1) {
-		if(HandlerInfo.RecvBytesUpdated == TRUE) {
-			/*
-			 * The device information has been updated for receive
-			 * processing,if all bytes received (1), indicate
-			 * success
-			 */
-			if (HandlerInfo.RemainingRecvBytes == 0) {
-				Status = XST_SUCCESS;
-			}
-			break;
-		}
-
-		/*
-		 * Any event status which occurs indicates there was an error,
-		 * so return unsuccessful, for this example there should be no
-		 * status events since there is a single master on the bus
-		 */
-		if (HandlerInfo.EventStatusUpdated == TRUE) {
-			break;
-		}
+		printf("Reading\r\n");
+		printf("ambient: %u\r\n", vcnl4010_readAmbient(&Iic));
+		vTaskDelay(pdMS_TO_TICKS(100));
+		printf("Proximity: %u\r\n",vcnl4010_readProximity(&Iic));
+		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
 
-	return Status;
+	// /*
+	//  * Attempt to receive a byte of data from the temperature sensor
+	//  * on the IIC interface, ignore the return value since this example is
+	//  * a single master system such that the IIC bus should not ever be busy
+	//  */
+	// (void)XIic_MasterRecv(&Iic, TemperaturePtr, 1);
+
+	// /*
+	//  * The message is being received from the temperature sensor,
+	//  * wait for it to complete by polling the information that is
+	//  * updated asynchronously by interrupt processing
+	//  */
+	// while(1) {
+	// 	if(HandlerInfo.RecvBytesUpdated == TRUE) {
+	// 		/*
+	// 		 * The device information has been updated for receive
+	// 		 * processing,if all bytes received (1), indicate
+	// 		 * success
+	// 		 */
+	// 		if (HandlerInfo.RemainingRecvBytes == 0) {
+	// 			printf("all bytes were processed\r\n");
+	// 			Status = XST_SUCCESS;
+	// 		}
+	// 		break;
+	// 	}
+
+	// 	/*
+	// 	 * Any event status which occurs indicates there was an error,
+	// 	 * so return unsuccessful, for this example there should be no
+	// 	 * status events since there is a single master on the bus
+	// 	 */
+	// 	if (HandlerInfo.EventStatusUpdated == TRUE) {
+	// 		printf("Event updated\r\n");
+	// 		break;
+	// 	}
+	// }
+
+	// printf("Handler info:\r\n");
+	// printf("HandlerInfo.EventStatusUpdated = %i\r\n",HandlerInfo.EventStatusUpdated);
+	// printf("HandlerInfo.RemainingRecvBytes = %i\r\n",HandlerInfo.RemainingRecvBytes);
+	// printf("HandlerInfo.Eventstatus = %i\r\n",HandlerInfo.EventStatus);
+	// return Status;
 }
 
 
 static int SetupInterruptSystem(XIic *IicPtr)
 {
 	int Status;
-
-
 	/*
 	 * Connect a device driver handler that will be called when an interrupt
 	 * for the device occurs, the device driver handler performs the
@@ -398,7 +422,6 @@ static int SetupInterruptSystem(XIic *IicPtr)
 	}
 
 	return XST_SUCCESS;
-
 }
 
 
@@ -448,4 +471,26 @@ static void StatusHandler(void *CallbackRef, int Status)
 	( void ) CallbackRef;
 	HandlerInfo.EventStatus |= Status;
 	HandlerInfo.EventStatusUpdated = TRUE;
+}
+
+
+/*****************************************************************************/
+/**
+* This Send handler is called asynchronously from an interrupt
+* context and indicates that data in the specified buffer has been sent.
+*
+* @param	InstancePtr is not used, but contains a pointer to the IIC
+*		device driver instance which the handler is being called for.
+*
+* @return	None.
+*
+* @note		None.
+*
+******************************************************************************/
+static void SendHandler(void *CallbackRef, int ByteCount)
+{
+	/* Remove compiler warning about unused parameter. */
+	( void ) CallbackRef;
+	(void) ByteCount;
+	HandlerInfo.TransmitComplete = TRUE;
 }

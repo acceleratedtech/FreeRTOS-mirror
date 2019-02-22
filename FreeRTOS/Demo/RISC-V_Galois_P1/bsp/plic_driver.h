@@ -4,6 +4,10 @@
 
 #include "stdint.h"
 
+// to get CONFIG_ASSERT
+#include "FreeRTOS.h"
+#include "task.h"
+
 // 32 bits per source
 #define PLIC_PRIORITY_OFFSET            0x0000UL
 #define PLIC_PRIORITY_SHIFT_PER_SOURCE  2
@@ -29,6 +33,7 @@
 
 //TODO: This might be better in bsp.h
 #define PLIC_NUM_INTERRUPTS 16
+#define PLIC_NUM_PRIORITIES 7
 
 /**
  * This data type defines an interrupt handler for a device.
@@ -62,18 +67,16 @@ typedef uint32_t plic_threshold;
 
 void PLIC_init (
                 plic_instance_t * this_plic,
-                uintptr_t         base_addr,
-                uint32_t num_sources,
-                uint32_t num_priorities
+                uintptr_t         base_addr
                 );
 
 void PLIC_set_threshold (plic_instance_t * this_plic,
 			 plic_threshold threshold);
   
-void PLIC_enable_interrupt (plic_instance_t * this_plic,
+plic_source PLIC_enable_interrupt (plic_instance_t * this_plic,
 			    plic_source source);
 
-void PLIC_disable_interrupt (plic_instance_t * this_plic,
+plic_source PLIC_disable_interrupt (plic_instance_t * this_plic,
 			     plic_source source);
   
 void PLIC_set_priority (plic_instance_t * this_plic,

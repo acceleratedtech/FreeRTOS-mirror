@@ -14,7 +14,7 @@ plic_instance_t Plic;
 void prvSetupHardware( void )
 {
     // Resets PLIC, threshold 0, nothing enabled
-    PLIC_init(&Plic, PLIC_BASE_ADDR, 4, 4);
+    PLIC_init(&Plic, PLIC_BASE_ADDR);
 
     // Set priorities
     PLIC_set_priority(&Plic, PLIC_SOURCE_UART0, PLIC_PRIORITY_UART0);
@@ -22,7 +22,10 @@ void prvSetupHardware( void )
     PLIC_set_priority(&Plic, PLIC_SOURCE_IIC, PLIC_PRIORITY_IIC);
     PLIC_set_priority(&Plic, PLIC_SOURCE_SPI, PLIC_PRIORITY_SPI);
 
-    UART_init();
+   // PLIC_set_threshold(&Plic, 1);
+
+    uart0_init();
+    uart1_init();
 }
 // Define an external interrupt handler
 // cause = 0x8000000b == Machine external interrupt
