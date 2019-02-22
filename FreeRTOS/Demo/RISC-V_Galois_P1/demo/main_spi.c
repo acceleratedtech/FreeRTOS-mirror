@@ -116,8 +116,8 @@ static XSpi SpiInstance;
 
 /* Buffers used to read and write to SPI device */
 // unsigned char ReadBuffer[BUFFER_SIZE];
-unsigned char WriteBuffer[BUFFER_SIZE];
-// unsigned char WriteBuffer[4];
+// unsigned char WriteBuffer[BUFFER_SIZE];
+unsigned char WriteBuffer[4];
 
 void vTestSpiLCD( void *pvParameters )
 {
@@ -164,17 +164,11 @@ void vTestSpiLCD( void *pvParameters )
   WriteBuffer[1] = '-';
   WriteBuffer[2] = 'h';
   WriteBuffer[3] = 'i';
-  
-  /* Put data to send in write buffer, initialize read buffer to zero */
-  Test = 0x10;
-    for (Count = 0; Count < BUFFER_SIZE; Count++) {
-    WriteBuffer[Count] = (char) (Count + Test);
-  }
 
   /* Transmit the data */
   TransferInProgress = TRUE;
   // XSpi_Transfer(&SpiInstance, WriteBuffer, NULL, 4);
-  XSpi_Transfer(&SpiInstance, WriteBuffer, NULL, BUFFER_SIZE);
+  XSpi_Transfer(&SpiInstance, WriteBuffer, NULL, 4);
 
   /* Wait for transfer to finish */
   while (TransferInProgress);
