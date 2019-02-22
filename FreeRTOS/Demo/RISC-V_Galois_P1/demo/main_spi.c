@@ -78,9 +78,11 @@ void main_spi( void );
  * The tasks as described in the comments at the top of this file.
  */
 
-static void vTestXilinxSPI( void *pvParameters );
+void vTestXilinxSPI( void *pvParameters );
 
-static void vTestXilinxSPIInterrupts( void *pvParameters );
+void vTestXilinxSPIInterrupts( void *pvParameters );
+
+void vTestSpiLCD( void *pvParameters );
 
 /* Interrupt functions */
 static int SpiSetupIntrSystem(XSpi *SpiPtr);
@@ -93,7 +95,7 @@ void main_spi( void )
 {
 	/* Create SPI test */
 	// xTaskCreate( vTestSPI, "SPI Test", 1000, NULL, 0, NULL );
-  xTaskCreate( vTestXilinxSPIInterrupts, "Xilinx SPI Test Interrupts", 1000, NULL, 0, NULL );
+  xTaskCreate( vTestSpiLCD, "Test SPI LCD", 1000, NULL, 0, NULL );
 
 	/* Start the kernel.  From here on, only tasks and interrupts will run. */
 	vTaskStartScheduler();
@@ -107,23 +109,23 @@ void main_spi( void )
 	for( ;; );
 }
 
-
 /*-----------------------------------------------------------*/
+
 /* Instance of Spi device */
 static XSpi SpiInstance;
 
 /* Buffers used to read and write to SPI device */
-unsigned char ReadBuffer[BUFFER_SIZE];
+// unsigned char ReadBuffer[BUFFER_SIZE];
 unsigned char WriteBuffer[BUFFER_SIZE];
+// unsigned char WriteBuffer[4];
 
-void vTestXilinxSPIInterrupts( void *pvParameters )
+void vTestSpiLCD( void *pvParameters )
 {
-
   /* Testing Xilinx SPI driver and interrupts using LCD */
 
   (void) pvParameters;
 
-  int Status_CfgInitialize, Status_SetOptions, Status_SetupIntrSystem;
+  int Status_CfgInitialize, Status_SetOptions, Status_SetupIntrSystem, Status_SetSlaveSelect;
   unsigned int Count;
   unsigned char Test;
   XSpi_Config *ConfigPtr; /* Pointer to Configuration data */
@@ -145,97 +147,166 @@ void vTestXilinxSPIInterrupts( void *pvParameters )
   XSpi_SetStatusHandler(&SpiInstance, &SpiInstance, 
           (XSpi_StatusHandler) SpiStatusHandler);
 
-  /* Set device to master mode and loopback mode */
+  /* Set device to master mode */
   Status_SetOptions = XSpi_SetOptions(&SpiInstance, XSP_MASTER_OPTION |
-          XSP_LOOPBACK_OPTION);
+          XSP_MANUAL_SSELECT_OPTION);
   configASSERT(Status_SetOptions == XST_SUCCESS);
+
+  /* Chooses slaves, doesn't set SS yet */
+  Status_SetSlaveSelect = XSpi_SetSlaveSelect(&SpiInstance, 1);
+  configASSERT(Status_SetSlaveSelect == XST_SUCCESS);
 
   /* Start the SPI driver so that the device and interrupts are enabled */
   XSpi_Start(&SpiInstance);
 
+  /* Put data to send in write buffer */
+  WriteBuffer[0] = '|';
+  WriteBuffer[1] = '-';
+  WriteBuffer[2] = 'h';
+  WriteBuffer[3] = 'i';
+  
   /* Put data to send in write buffer, initialize read buffer to zero */
   Test = 0x10;
-  for (Count = 0; Count < BUFFER_SIZE; Count++) {
+    for (Count = 0; Count < BUFFER_SIZE; Count++) {
     WriteBuffer[Count] = (char) (Count + Test);
-    ReadBuffer[Count] = 0;
   }
 
-  /* To receive confirmation that buffers contain same data */
-  printf("WriteBuffer[3] is %d\n", WriteBuffer[3]);
-  
   /* Transmit the data */
   TransferInProgress = TRUE;
-  XSpi_Transfer(&SpiInstance, WriteBuffer, ReadBuffer, BUFFER_SIZE);
+  // XSpi_Transfer(&SpiInstance, WriteBuffer, NULL, 4);
+  XSpi_Transfer(&SpiInstance, WriteBuffer, NULL, BUFFER_SIZE);
 
   /* Wait for transfer to finish */
-  while (TransferInProgress) {
-  }
+  while (TransferInProgress);
 
-  /* Compare received data with transmitted data */
-  for (Count = 0; Count < BUFFER_SIZE; Count++) {
-    configASSERT(WriteBuffer[Count] == ReadBuffer[Count]);
-  }
-
-  /* To receive confirmation that buffers contain same data */
-  printf("ReaderBuffer[3] is %d\n", ReadBuffer[3]);
+  // vTaskDelay( pdMS_TO_TICKS(25) );
 
   vTaskDelete(NULL);
 
 }
-
 /*-----------------------------------------------------------*/
 
-void vTestXilinxSPI( void *pvParameters )
-{
-  (void) pvParameters;
 
-  int Status_CfgInitialize, Status_SelfTest, Status_SetOptions;
-  unsigned int Count;
-  unsigned char Test;
-  XSpi_Config *ConfigPtr; /* Pointer to Configuration data */
+// void vTestXilinxSPIInterrupts( void *pvParameters )
+// {
 
+//   /* Testing Xilinx SPI driver and interrupts using LCD */
 
-  /* Initalize SPI device driver */
-  ConfigPtr = XSpi_LookupConfig(XPAR_SPI_0_DEVICE_ID);
-  configASSERT(ConfigPtr != NULL);
+//   (void) pvParameters;
 
-  Status_CfgInitialize = XSpi_CfgInitialize(&SpiInstance, ConfigPtr,
-          ConfigPtr->BaseAddress);
-  configASSERT(Status_CfgInitialize == XST_SUCCESS);
+//   int Status_CfgInitialize, Status_SetOptions, Status_SetupIntrSystem;
+//   unsigned int Count;
+//   unsigned char Test;
+//   XSpi_Config *ConfigPtr; /* Pointer to Configuration data */
 
-  /* Perform a self-test to ensure hardware was built correctly */
-  Status_SelfTest = XSpi_SelfTest(&SpiInstance);
-  configASSERT(Status_SelfTest == XST_SUCCESS);
+//   /* Initalize SPI device driver */
+//   ConfigPtr = XSpi_LookupConfig(XPAR_SPI_0_DEVICE_ID);
+//   configASSERT(ConfigPtr != NULL);
 
-  /* Set device to master mode and loopback mode */
-  Status_SetOptions = XSpi_SetOptions(&SpiInstance, XSP_MASTER_OPTION |
-          XSP_LOOPBACK_OPTION);
-  configASSERT(Status_SetOptions == XST_SUCCESS);
+//   Status_CfgInitialize = XSpi_CfgInitialize(&SpiInstance, ConfigPtr,
+//           ConfigPtr->BaseAddress);
+//   configASSERT(Status_CfgInitialize == XST_SUCCESS);
 
-  /* Start the SPI driver so that the device is enabled */
-  XSpi_Start(&SpiInstance);
+//   /* Setup interrupt system */
+//   Status_SetupIntrSystem = SpiSetupIntrSystem(&SpiInstance);
+//   configASSERT(Status_SetupIntrSystem == XST_SUCCESS);
 
-  /* Disable Global interrupt to use polled mode operation */
-  XSpi_IntrGlobalDisable(&SpiInstance);
+//   /* Setup SPI status handler to indicate that SpiIntrHandler
+//   should be called when there is an interrupt (doesn't PLIC table do this?) */
+//   XSpi_SetStatusHandler(&SpiInstance, &SpiInstance, 
+//           (XSpi_StatusHandler) SpiStatusHandler);
 
-  /* Put data in write buffer, initialize read buffer to zero */
-  Test = 0x10;
-  for (Count = 0; Count < BUFFER_SIZE; Count++) {
-    WriteBuffer[Count] = (char) (Count + Test);
-    ReadBuffer[Count] = 0;
-  }
+//   /* Set device to master mode and loopback mode */
+//   Status_SetOptions = XSpi_SetOptions(&SpiInstance, XSP_MASTER_OPTION |
+//           XSP_LOOPBACK_OPTION);
+//   configASSERT(Status_SetOptions == XST_SUCCESS);
+
+//   /* Start the SPI driver so that the device and interrupts are enabled */
+//   XSpi_Start(&SpiInstance);
+
+//   /* Put data to send in write buffer, initialize read buffer to zero */
+//   Test = 0x10;
+//   for (Count = 0; Count < BUFFER_SIZE; Count++) {
+//     WriteBuffer[Count] = (char) (Count + Test);
+//     ReadBuffer[Count] = 0;
+//   }
+
+//   /* To receive confirmation that buffers contain same data */
+//   printf("WriteBuffer[3] is %d\n", WriteBuffer[3]);
   
-  /* Transmit the data */
-  XSpi_Transfer(&SpiInstance, WriteBuffer, ReadBuffer, BUFFER_SIZE);
+//   /* Transmit the data */
+//   TransferInProgress = TRUE;
+//   XSpi_Transfer(&SpiInstance, WriteBuffer, ReadBuffer, BUFFER_SIZE);
 
-  /* Compare received data with transmitted data */
-  for (Count = 0; Count < BUFFER_SIZE; Count++) {
-    configASSERT(WriteBuffer[Count] == ReadBuffer[Count]);
-  }
+//   /* Wait for transfer to finish */
+//   while (TransferInProgress) {
+//   }
 
-  vTaskDelete(NULL);
+//   /* Compare received data with transmitted data */
+//   for (Count = 0; Count < BUFFER_SIZE; Count++) {
+//     configASSERT(WriteBuffer[Count] == ReadBuffer[Count]);
+//   }
 
-}
+//   /* To receive confirmation that buffers contain same data */
+//   printf("ReaderBuffer[3] is %d\n", ReadBuffer[3]);
+
+//   vTaskDelete(NULL);
+
+// }
+
+// /*-----------------------------------------------------------*/
+
+// void vTestXilinxSPI( void *pvParameters )
+// {
+//   (void) pvParameters;
+
+//   int Status_CfgInitialize, Status_SelfTest, Status_SetOptions;
+//   unsigned int Count;
+//   unsigned char Test;
+//   XSpi_Config *ConfigPtr; /* Pointer to Configuration data */
+
+
+//   /* Initalize SPI device driver */
+//   ConfigPtr = XSpi_LookupConfig(XPAR_SPI_0_DEVICE_ID);
+//   configASSERT(ConfigPtr != NULL);
+
+//   Status_CfgInitialize = XSpi_CfgInitialize(&SpiInstance, ConfigPtr,
+//           ConfigPtr->BaseAddress);
+//   configASSERT(Status_CfgInitialize == XST_SUCCESS);
+
+//   /* Perform a self-test to ensure hardware was built correctly */
+//   Status_SelfTest = XSpi_SelfTest(&SpiInstance);
+//   configASSERT(Status_SelfTest == XST_SUCCESS);
+
+//   /* Set device to master mode and loopback mode */
+//   Status_SetOptions = XSpi_SetOptions(&SpiInstance, XSP_MASTER_OPTION |
+//           XSP_LOOPBACK_OPTION);
+//   configASSERT(Status_SetOptions == XST_SUCCESS);
+
+//   /* Start the SPI driver so that the device is enabled */
+//   XSpi_Start(&SpiInstance);
+
+//   /* Disable Global interrupt to use polled mode operation */
+//   XSpi_IntrGlobalDisable(&SpiInstance);
+
+//   /* Put data in write buffer, initialize read buffer to zero */
+//   Test = 0x10;
+//   for (Count = 0; Count < BUFFER_SIZE; Count++) {
+//     WriteBuffer[Count] = (char) (Count + Test);
+//     ReadBuffer[Count] = 0;
+//   }
+  
+//   /* Transmit the data */
+//   XSpi_Transfer(&SpiInstance, WriteBuffer, ReadBuffer, BUFFER_SIZE);
+
+//   /* Compare received data with transmitted data */
+//   for (Count = 0; Count < BUFFER_SIZE; Count++) {
+//     configASSERT(WriteBuffer[Count] == ReadBuffer[Count]);
+//   }
+
+//   vTaskDelete(NULL);
+
+// }
 
 /*-----------------------------------------------------------*/
 

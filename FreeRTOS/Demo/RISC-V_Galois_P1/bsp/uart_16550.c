@@ -59,7 +59,7 @@ int uart0_init(void)
   divisor = UART_CLOCK_RATE / (16 * DEFAULT_BAUDRATE);
 
   /* Enable "Received data available interrupt" */
-  pio0->ier = 0x01;//0; 
+  pio0->ier = 0x01; 
 
   /* DLAB=1, Set Divisor Latch MSB and LSB registers */
   pio0->lcr |= LCR_DLAB;
