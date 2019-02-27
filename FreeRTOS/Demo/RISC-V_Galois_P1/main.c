@@ -43,17 +43,11 @@
 	#pragma message "Demo type 2: Full"
 	extern void main_full( void );
 #elif mainDEMO_TYPE == 3
-	#pragma message "Demo type 3: Barcode test"
-	extern void main_barcode( void );
+	#pragma message "Demo type 3: Padding Leakage PoC"
+	extern void main_padding_leakage( void );
 #elif mainDEMO_TYPE == 4
-	#pragma message "Demo type 4: GPIO test"
-	extern void main_gpio( void );
-#elif mainDEMO_TYPE == 5
-	#pragma message "Demo type 5: SPI test"
-	extern void main_spi( void );
-#elif mainDEMO_TYPE == 6
-	#pragma message "Demo type 6: Drivers"
-	extern void main_drivers( void );
+	#pragma message "Demo type 4: Patched Padding Leakage PoC"
+	extern void main_patched_padding_leakage( void );
 #else
 	#error "Unsupported demo type"
 #endif
@@ -72,12 +66,6 @@ void vToggleLED( void );
 
 /*-----------------------------------------------------------*/
 
-/* The UART to which strings are output, and the GPIO used to toggle the LED. */
-//static UART_instance_t g_uart;
-//static gpio_instance_t g_gpio_out;
-
-/*-----------------------------------------------------------*/
-
 int main( void )
 {
 	prvSetupHardware();
@@ -92,19 +80,11 @@ int main( void )
 	}
 	#elif mainDEMO_TYPE == 3
 	{
-		main_barcode();
+		main_padding_leakage();
 	}
 	#elif mainDEMO_TYPE == 4
 	{
-		main_gpio();
-	}
-	#elif mainDEMO_TYPE == 5
-	{
-		main_spi();
-	}
-	#elif mainDEMO_TYPE == 6
-	{
-		main_drivers();
+		main_patched_padding_leakage();
 	}
 	#endif
 }

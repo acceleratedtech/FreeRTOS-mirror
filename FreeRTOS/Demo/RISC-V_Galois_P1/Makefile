@@ -101,51 +101,18 @@ ifeq ($(PROG),main_full)
 	CFLAGS += -DmainDEMO_TYPE=2
 	PORT_ASM += demo/RegTest.S
 else
-ifeq ($(PROG),main_barcode)
+ifeq ($(PROG),main_padding_leakage)
 	CFLAGS += -DmainDEMO_TYPE=3
 else
-ifeq ($(PROG),main_gpio)
+ifeq ($(PROG),main_patched_padding_leakage)
 	CFLAGS += -DmainDEMO_TYPE=4
-	DEMO_SRC += bsp/gpio.c
-else
-ifeq ($(PROG),main_spi)
-	CFLAGS += -DmainDEMO_TYPE=5
-	INCLUDES += \
-		-I./bsp/xilinx/spi/src \
-		-I./bsp/xilinx/common
-	DEMO_SRC += \
-		./bsp/xilinx/spi/src/xspi.c \
-		./bsp/xilinx/spi/src/xspi_g.c \
-		./bsp/xilinx/spi/src/xspi_sinit.c \
-		./bsp/xilinx/spi/src/xspi_selftest.c \
-		./bsp/xilinx/spi/src/xspi_options.c \
-		./bsp/xilinx/common/xbasic_types.c \
-		./bsp/xilinx/common/xil_io.c \
-		./bsp/xilinx/common/xil_assert.c
-else
-ifeq ($(PROG),main_drivers)
-	CFLAGS += -DmainDEMO_TYPE=6
-	INCLUDES += \
-		-I./bsp/xilinx \
-		-I./bsp/xilinx/iic/src \
-		-I./bsp/xilinx/common
-	DEMO_SRC += \
-		./bsp/xilinx/iic/src/xiic.c \
-		./bsp/xilinx/iic/src/xiic_g.c \
-		./bsp/xilinx/iic/src/xiic_sinit.c \
-		./bsp/xilinx/iic/src/xiic_selftest.c \
-		./bsp/xilinx/common/xbasic_types.c \
-		./bsp/xilinx/common/xil_io.c \
-		./bsp/xilinx/common/xil_assert.c \
-		./bsp/xilinx/common/xiic_stats.c
 else
 	$(info unknown demo: $(PROG))
 endif
 endif
 endif
 endif
-endif
-endif
+
 
 ARFLAGS=crsv
 
