@@ -57,6 +57,9 @@
 #elif mainDEMO_TYPE == 7
 	#pragma message "Demo type 7: SD"
 	extern void main_sd( void );
+#elif mainDEMO_TYPE == 8
+	#pragma message "Demo type 8: UART"
+	extern void main_newuart( void );
 #else
 	#error "Unsupported demo type"
 #endif
@@ -109,6 +112,10 @@ int main( void )
 	#elif mainDEMO_TYPE == 7
 	{
 		main_sd();
+	}
+	#elif mainDEMO_TYPE == 8
+	{
+		main_newuart();
 	}
 	#endif
 }

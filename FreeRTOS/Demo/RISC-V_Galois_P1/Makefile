@@ -172,7 +172,11 @@ ifeq ($(PROG),main_sd)
 		./bsp/xilinx/spi/src/xspi_options.c \
 		./bsp/storage/sd/sdmm.c
 else
+ifeq ($(PROG),main_newuart)
+	CFLAGS += -DmainDEMO_TYPE=8
+else
 	$(info unknown demo: $(PROG))
+endif
 endif
 endif
 endif
