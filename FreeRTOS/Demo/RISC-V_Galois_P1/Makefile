@@ -158,7 +158,22 @@ ifeq ($(PROG),main_drivers)
 		./bsp/xilinx/common/xil_assert.c \
 		./bsp/xilinx/common/xiic_stats.c
 else
+ifeq ($(PROG),main_sd)
+	CFLAGS += -DmainDEMO_TYPE=7
+	INCLUDES += \
+		-I./bsp/xilinx/spi/src \
+		-I./bsp/xilinx/common \
+		-I./bsp/storage/sd
+	DEMO_SRC += \
+		./bsp/xilinx/spi/src/xspi.c \
+		./bsp/xilinx/spi/src/xspi_g.c \
+		./bsp/xilinx/spi/src/xspi_sinit.c \
+		./bsp/xilinx/spi/src/xspi_selftest.c \
+		./bsp/xilinx/spi/src/xspi_options.c \
+		./bsp/storage/sd/sdmm.c
+else
 	$(info unknown demo: $(PROG))
+endif
 endif
 endif
 endif

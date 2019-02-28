@@ -54,6 +54,9 @@
 #elif mainDEMO_TYPE == 6
 	#pragma message "Demo type 6: Drivers"
 	extern void main_drivers( void );
+#elif mainDEMO_TYPE == 7
+	#pragma message "Demo type 7: SD"
+	extern void main_sd( void );
 #else
 	#error "Unsupported demo type"
 #endif
@@ -102,6 +105,10 @@ int main( void )
 	#elif mainDEMO_TYPE == 6
 	{
 		main_drivers();
+	}
+	#elif mainDEMO_TYPE == 7
+	{
+		main_sd();
 	}
 	#endif
 }

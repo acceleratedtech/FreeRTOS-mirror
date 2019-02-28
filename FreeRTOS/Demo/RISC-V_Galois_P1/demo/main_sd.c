@@ -55,8 +55,12 @@
 #include "uart_16550.h"
 
 /* Xilinx driver includes */
-#include "xparameters.h"
 #include "xspi.h"
+#include "bsp.h"
+#include "plic_driver.h"
+
+/* SD includes */
+#include "diskio.h"
 
 #define BUFFER_SIZE 16
 
@@ -65,7 +69,7 @@
 /*
  * Called by main when PROG=main_spi
  */
-void main_spi( void );
+void main_sd( void );
 
 /*
  * The tasks as described in the comments at the top of this file.
@@ -74,7 +78,7 @@ static void vTestSD( void *pvParameters );
 
 /*-----------------------------------------------------------*/
 
-void main_spi( void )
+void main_sd( void )
 {
 	/* Create SPI test */
 	// xTaskCreate( vTestSPI, "SPI Test", 1000, NULL, 0, NULL );
@@ -104,7 +108,10 @@ void vTestSD( void *pvParameters )
 {                                           
   (void) pvParameters;
 
-  disk_initialize(0);
+  unsigned int Count;
+  unsigned char Test;
+
+  disk_initialize(SpiInstance, 0);
 
   /* Put data in write buffer, initialize read buffer to zero */
   Test = 0x10;
@@ -114,10 +121,15 @@ void vTestSD( void *pvParameters )
   }
 
   /* Write to one block starting at sector 100 */
-  disk_write(0, WriteBuffer, 100, 1);
+  disk_write(SpiInstance, 0, WriteBuffer, 100, 1);
 
   /* Read the same block */
-  disk_read(0, ReadBuffer, 100, 1);
+  disk_read(SpiInstance, 0, ReadBuffer, 100, 1);
+
+  /* Compare received data with transmitted data */
+  for (Count = 0; Count < BUFFER_SIZE; Count++) {
+    configASSERT(WriteBuffer[Count] == ReadBuffer[Count]);
+  }
 
   vTaskDelete(NULL);
 

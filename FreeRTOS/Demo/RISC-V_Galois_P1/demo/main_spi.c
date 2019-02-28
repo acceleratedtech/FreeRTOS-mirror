@@ -172,7 +172,6 @@ void vTestSpiLCD( void *pvParameters )
 
   /* Wait for transfer to finish */
   while (TransferInProgress);
-
   // vTaskDelay( pdMS_TO_TICKS(25) );
 
   vTaskDelete(NULL);

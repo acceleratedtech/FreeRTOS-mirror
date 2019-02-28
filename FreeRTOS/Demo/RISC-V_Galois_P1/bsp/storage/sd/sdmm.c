@@ -26,18 +26,25 @@
 
 /-------------------------------------------------------------------------*/
 
-
 #include "ff.h"		/* Obtains integer types for FatFs */
 #include "diskio.h"	/* Common include file for FatFs and disk I/O layer */
-
-/* Xilinx driver includes */
-#include "xspi.h"
 
 /*-------------------------------------------------------------------------*/
 /* Platform dependent macros and functions needed to be modified           */
 /*-------------------------------------------------------------------------*/
 
-#include <avr/io.h>			/* Include device specific declareation file here */
+/* Xilinx driver includes */
+#include "xspi.h"
+
+/* Indicates whether transfer in progress based on interrupts */
+volatile int TransferInProgress;
+
+/* FreeRTOS includes */
+#include "FreeRTOS.h"
+#include "task.h"
+
+
+// #include <avr/io.h>			/* Include device specific declareation file here */
 
 
 /*--------------------------------------------------------------------------
@@ -69,6 +76,10 @@
 #define CMD55	(55)		/* APP_CMD */
 #define CMD58	(58)		/* READ_OCR */
 
+/* Tokens */
+#define STOP_TRAN 		(0xFD)	/* Stop Tran token for CMD25 */
+#define DATA_TOKEN17	(0xFE)	/* Data token for CMD17/18/24 */
+#define DATA_TOKEN25	(0xFC)	/* Data token for CMD25 */
 
 static
 DSTATUS Stat = STA_NOINIT;	/* Disk status */
@@ -76,70 +87,6 @@ DSTATUS Stat = STA_NOINIT;	/* Disk status */
 static
 BYTE CardType;			/* b0:MMC, b1:SDv1, b2:SDv2, b3:Block addressing */
 
-
-/*-----------------------------------------------------------------------*/
-/* SD SPI Transfer                      	                             */
-/*-----------------------------------------------------------------------*/
-static
-int SD_Block_XSpi_Transfer(XSpi *InstancePtr, u8 *SendBufPtr,
-		BYTE token)
-{
-	
-	u8 *RecvBufPtr[(sizeof(*SendBufPtr))];
-
-	/* Wait for ready? */
-
-	/* If token indicates a data transfer */
-	if (token == STOP_TRAN) 
-	{
-		TransferInProgress = TRUE;
-
-		// Buffer may be too large -- break up into two? (2x 256)
-		/* Send data block and receive response */
-		XSpi_Transfer(InstancePtr, &token, NULL, 1);
-
-		/* Wait for transfer done interrupt */
-		while(TransferInProgress);
-
- 	} else if (token != STOP_TRAN) {
-
- 		/* Send data token */
- 		TransferInProgress = TRUE;
-
-		// Buffer may be too large -- break up into two? (2x 256)
-		// Also need to take into account CRC bytes + any other extra bytes
-		/* Send data block and receive response */
-		XSpi_Transfer(InstancePtr, &token, NULL, 1);
-
-		/* Wait for transfer done interrupt */
-		while(TransferInProgress);
-
-		/* Send data block */
-		TransferInProgress = TRUE;
-
-		// Buffer may be too large -- break up into two? (2x 256)
-		// Also need to take into account CRC bytes + any other extra bytes
-		/* Send data block and receive response */
-		XSpi_Transfer(InstancePtr, SendBufPtr, RecvBufPtr, 512);
-
-		/* Wait for transfer done interrupt */
-		while(TransferInProgress);
-
-		/* Check response for acceptance */
-		if ((RecvBufPtr[0] & 0x1F) != 0x05) {
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
-static
-int SD_Block_XSpi_Receive(XSpi *InstancePtr, u8 *SendBufPtr, 
-		u8 *RecvBufPtr, UINT num_bytes)
-{
-	XSpi_Transfer(InstancePtr, RecvBufPtr, RecvBufPtr, num_bytes);
-}
 
 /*-----------------------------------------------------------------------*/
 /* Wait for card ready                                                   */
@@ -151,9 +98,8 @@ int wait_ready (void)	/* 1:OK, 0:Timeout */
 	BYTE d;
 	UINT tmr;
 
-
 	for (tmr = 5000; tmr; tmr--) {	/* Wait for ready in timeout of 500ms */
-		rcvr_mmc(&d, 1);
+		XSpi_Transfer(&SpiInstance, &d, &d, 1);
 		if (d == 0xFF) break;
 		// dly_us(100);
 		vTaskDelay( pdMS_TO_TICKS(0.1) );
@@ -173,8 +119,16 @@ void deselect (void)
 {
 	BYTE d;
 
-	CS_H();				/* Set CS# high */
-	rcvr_mmc(&d, 1);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
+	// CS_H();				/* Set CS# high */
+	// rcvr_mmc(&d, 1);	 /* Dummy clock (force DO hi-z for multiple slave SPI) */
+
+	/* Set CS# high */
+	XSpi_SetSlaveSelect(&SpiInstance, 0);
+	/* Dummy clock (force DO hi-z for multiple slave SPI) */
+	XSpi_Transfer(&SpiInstance, &d, &d, 1);
+	/* Set slave back to correct */
+	XSpi_SetSlaveSelect(&SpiInstance, 1);
+
 }
 
 
@@ -188,9 +142,12 @@ int select (void)	/* 1:OK, 0:Timeout */
 {
 	BYTE d;
 
-	CS_L();				/* Set CS# low */
-	rcvr_mmc(&d, 1);	/* Dummy clock (force DO enabled) */
-	if (wait_ready()) return 1;	/* Wait for card ready */
+	// CS_L();				/* Set CS# low */
+	// rcvr_mmc(&d, 1);	/*  Dummy clock (force DO enabled) */
+	// if (wait_ready()) return 1;	/* Wait for card ready */
+
+	XSpi_Transfer(&SpiInstance, &d, &d ,1);
+	if (wait_ready()) return 1;		/* Wait for card ready */	
 
 	deselect();
 	return 0;			/* Failed */
@@ -224,7 +181,7 @@ BYTE send_cmd (		/* Returns command response (bit7==1:Send failed)*/
 		if (!select()) return 0xFF;
 	}
 
-	/* Send a command packet */
+	/* Create a command packet */
 	buf[0] = 0x40 | cmd;			/* Start + Command index */
 	buf[1] = (BYTE)(arg >> 24);		/* Argument[31..24] */
 	buf[2] = (BYTE)(arg >> 16);		/* Argument[23..16] */
@@ -236,10 +193,13 @@ BYTE send_cmd (		/* Returns command response (bit7==1:Send failed)*/
 	buf[5] = n;
 	// xmit_mmc(buf, 6);
 	// Need to check whether DO/MISO is high?
-	// XSpi_Transfer(SpiInstance, buf, NULL, 6);
+	// XSpi_Transfer(S&piInstance, buf, NULL, 6);
 
-	/* Send CMD and receive response */
-	XSpi_Transfer(SpiInstance, buf, d, 6);
+	/* Send command packet and receive response */
+	XSpi_Transfer(&SpiInstance, buf, d, 6);
+
+	/* When debugging, check to make sure we're receiving/returning the 
+	response value */
 
 	// /* Receive command response */
 	// if (cmd == CMD12) rcvr_mmc(&d, 1);	/* Skip a stuff byte when stop reading */
@@ -251,7 +211,84 @@ BYTE send_cmd (		/* Returns command response (bit7==1:Send failed)*/
 	return d[0];			/* Return with the response value */
 }
 
+/*-----------------------------------------------------------------------*/
+/* Receive a data packet from the card via SPI                           */
+/*-----------------------------------------------------------------------*/
 
+static
+int SD_Block_XSpi_Receive(XSpi *InstancePtr, u8 *RecvBufPtr, 
+		UINT num_bytes)
+{
+	BYTE d[2];
+	UINT tmr;
+
+	for (tmr = 1000; tmr; tmr--) {	/* Wait for data packet in timeout of 100ms */
+		XSpi_Transfer(InstancePtr, d, d, 1);
+		if (d[0] != 0xFF) break;
+		// dly_us(100);
+		vTaskDelay( pdMS_TO_TICKS(0.1) );
+	}
+	if (d[0] != DATA_TOKEN17) return 0;		/* If not valid data token, return with error */
+
+	/* Receive the data block into buffer */
+	XSpi_Transfer(InstancePtr, RecvBufPtr, RecvBufPtr, num_bytes); 
+	XSpi_Transfer(InstancePtr, d, d, 2);	/* Discard CRC */
+
+	return 1; 	/* Return with success */
+}
+
+/*-----------------------------------------------------------------------*/
+/* Send a data packet to the card via SPI               	             */
+/*-----------------------------------------------------------------------*/
+
+static
+int SD_Block_XSpi_Transfer(XSpi *InstancePtr, u8 *SendBufPtr,
+		BYTE token)
+{
+	
+	u8 RecvBufPtr[(sizeof(*SendBufPtr))];
+
+	if (!wait_ready()) return 0;
+
+	/* If token indicates a data transfer */
+	if (token == STOP_TRAN) 
+	{
+		TransferInProgress = TRUE;
+
+		/* Send data block and receive response */
+		XSpi_Transfer(InstancePtr, &token, NULL, 1);
+
+		/* Wait for transfer done interrupt */
+		while(TransferInProgress);
+
+ 	} else if (token != STOP_TRAN) {
+
+ 		/* Send data token */
+ 		TransferInProgress = TRUE;
+
+		/* Send data block and receive response */
+		XSpi_Transfer(InstancePtr, &token, NULL, 1);
+
+		/* Wait for transfer done interrupt */
+		while(TransferInProgress);
+
+		/* Send data block */
+		TransferInProgress = TRUE;
+
+		/* Send data block and receive response */
+		XSpi_Transfer(InstancePtr, SendBufPtr, RecvBufPtr, 512);
+
+		/* Wait for transfer done interrupt */
+		while(TransferInProgress);
+
+		/* Check response for acceptance */
+		if ((RecvBufPtr[0] & 0x1F) != 0x05) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
 
 /*--------------------------------------------------------------------------
 
@@ -280,6 +317,7 @@ DSTATUS disk_status (
 /*-----------------------------------------------------------------------*/
 
 DSTATUS disk_initialize (
+	XSpi SpiInstance,
 	BYTE drv		/* Physical drive nmuber (0) */
 )
 {
@@ -294,21 +332,26 @@ DSTATUS disk_initialize (
 	vTaskDelay( pdMS_TO_TICKS(10) );
 
 	/* Setup SPI driver */
+	/* Break up into general config and SD config? */
 	XSpi_LookupConfig(XPAR_SPI_0_DEVICE_ID);
 	XSpi_CfgInitialize(&SpiInstance, ConfigPtr,
           ConfigPtr->BaseAddress);
+	SpiSetupIntrSystem(&SpiInstance);
+	XSpi_SetStatusHandler(&SpiInstance, &SpiInstance, 
+          (XSpi_StatusHandler) SpiStatusHandler);
 	XSpi_SetOptions(&SpiInstance, XSP_MASTER_OPTION);
+	XSpi_SetSlaveSelect(&SpiInstance, 1);
 	XSpi_Start(&SpiInstance);
 
 
 	// for (n = 10; n; n--) rcvr_mmc(buf, 1);	/* Apply 80 dummy clocks and the card gets ready to receive command */
-	for (n = 10; n; n--) XSpi_Transfer(SpiInstance, buf, buf, 1);
+	for (n = 10; n; n--) XSpi_Transfer(&SpiInstance, buf, buf, 1);
 
 	ty = 0;
 	if (send_cmd(CMD0, 0) == 1) {			/* Enter Idle state */
 		if (send_cmd(CMD8, 0x1AA) == 1) {	/* SDv2? */
 			// rcvr_mmc(buf, 4);
-			XSpi_Transfer(SpiInstance, buf, buf, 4);	/* Get trailing return value of R7 resp */
+			XSpi_Transfer(&SpiInstance, buf, buf, 4);	/* Get trailing return value of R7 resp */
 			if (buf[2] == 0x01 && buf[3] == 0xAA) {		/* The card can work at vdd range of 2.7-3.6V */
 				for (tmr = 1000; tmr; tmr--) {			/* Wait for leaving idle state (ACMD41 with HCS bit) */
 					if (send_cmd(ACMD41, 1UL << 30) == 0) break;
@@ -317,7 +360,7 @@ DSTATUS disk_initialize (
 				}
 				if (tmr && send_cmd(CMD58, 0) == 0) {	/* Check CCS bit in the OCR */
 					// rcvr_mmc(buf, 4);
-					XSpi_Transfer(SpiInstance, buf, buf, 4);
+					XSpi_Transfer(&SpiInstance, buf, buf, 4);
 					ty = (buf[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;	/* SDv2 */
 				}
 			}
@@ -352,6 +395,7 @@ DSTATUS disk_initialize (
 /*-----------------------------------------------------------------------*/
 
 DRESULT disk_read (
+	XSpi SpiInstance,
 	BYTE drv,			/* Physical drive nmuber (0) */
 	BYTE *buff,			/* Pointer to the data buffer to store read data */
 	DWORD sector,		/* Start sector number (LBA) */
@@ -384,6 +428,7 @@ DRESULT disk_read (
 /*-----------------------------------------------------------------------*/
 
 DRESULT disk_write (
+	XSpi SpiInstance,
 	BYTE drv,			/* Physical drive nmuber (0) */
 	const BYTE *buff,	/* Pointer to the data to be written */
 	DWORD sector,		/* Start sector number (LBA) */
@@ -396,7 +441,7 @@ DRESULT disk_write (
 	if (count == 1) {	/* Single block write */
 		if ((send_cmd(CMD24, sector) == 0)	/* WRITE_BLOCK */
 			// && xmit_datablock(buff, 0xFE))
-			&& SD_Block_XSpi_Transfer(SpiInstance, buff, ));
+			&& SD_Block_XSpi_Transfer(&SpiInstance, buff, DATA_TOKEN17));
 			count = 0;
 	}
 	else {				/* Multiple block write */
@@ -404,11 +449,11 @@ DRESULT disk_write (
 		if (send_cmd(CMD25, sector) == 0) {	/* WRITE_MULTIPLE_BLOCK */
 			do {
 				// if (!xmit_datablock(buff, 0xFC)) break;
-				if (!SD_Block_XSpi_Transfer(SpiInstance, buff, )) break;
+				if (!SD_Block_XSpi_Transfer(&SpiInstance, buff, DATA_TOKEN25)) break;
 				buff += 512;
 			} while (--count);
 			// if (!xmit_datablock(0, 0xFD))	/* STOP_TRAN token */
-			if (!SD_Block_XSpi_Transfer(SpiInstance, 0, )) /* STOP_TRAN token */
+			if (!SD_Block_XSpi_Transfer(&SpiInstance, 0, STOP_TRAN)) /* STOP_TRAN token */
 				count = 1;
 		}
 	}
