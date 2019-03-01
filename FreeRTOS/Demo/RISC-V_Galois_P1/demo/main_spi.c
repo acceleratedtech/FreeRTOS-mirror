@@ -95,7 +95,7 @@ void main_spi( void )
 {
 	/* Create SPI test */
 	// xTaskCreate( vTestSPI, "SPI Test", 1000, NULL, 0, NULL );
-  xTaskCreate( vTestSpiLCD, "Test SPI LCD", 1000, NULL, 0, NULL );
+  xTaskCreate( vTestXilinxSPIInterrupts, "Test SPI Intr", 1000, NULL, 0, NULL );
 
 	/* Start the kernel.  From here on, only tasks and interrupts will run. */
 	vTaskStartScheduler();
@@ -115,9 +115,9 @@ void main_spi( void )
 static XSpi SpiInstance;
 
 /* Buffers used to read and write to SPI device */
-// unsigned char ReadBuffer[BUFFER_SIZE];
-// unsigned char WriteBuffer[BUFFER_SIZE];
-unsigned char WriteBuffer[4];
+unsigned char ReadBuffer[BUFFER_SIZE];
+unsigned char WriteBuffer[BUFFER_SIZE];
+// unsigned char WriteBuffer[4];
 
 void vTestSpiLCD( void *pvParameters )
 {
@@ -142,8 +142,8 @@ void vTestSpiLCD( void *pvParameters )
   Status_SetupIntrSystem = SpiSetupIntrSystem(&SpiInstance);
   configASSERT(Status_SetupIntrSystem == XST_SUCCESS);
 
-  /* Setup SPI status handler to indicate that SpiIntrHandler
-  should be called when there is an interrupt (doesn't PLIC table do this?) */
+  /* Setup SPI status handler to indicate that SpiStatusHandler
+  should be called when there is an interrupt */
   XSpi_SetStatusHandler(&SpiInstance, &SpiInstance, 
           (XSpi_StatusHandler) SpiStatusHandler);
 
@@ -180,72 +180,72 @@ void vTestSpiLCD( void *pvParameters )
 /*-----------------------------------------------------------*/
 
 
-// void vTestXilinxSPIInterrupts( void *pvParameters )
-// {
+void vTestXilinxSPIInterrupts( void *pvParameters )
+{
 
-//   /* Testing Xilinx SPI driver and interrupts using LCD */
+  /* Testing Xilinx SPI driver and interrupts using LCD */
 
-//   (void) pvParameters;
+  (void) pvParameters;
 
-//   int Status_CfgInitialize, Status_SetOptions, Status_SetupIntrSystem;
-//   unsigned int Count;
-//   unsigned char Test;
-//   XSpi_Config *ConfigPtr; /* Pointer to Configuration data */
+  int Status_CfgInitialize, Status_SetOptions, Status_SetupIntrSystem;
+  unsigned int Count;
+  unsigned char Test;
+  XSpi_Config *ConfigPtr; /* Pointer to Configuration data */
 
-//   /* Initalize SPI device driver */
-//   ConfigPtr = XSpi_LookupConfig(XPAR_SPI_0_DEVICE_ID);
-//   configASSERT(ConfigPtr != NULL);
+  /* Initalize SPI device driver */
+  ConfigPtr = XSpi_LookupConfig(XPAR_SPI_0_DEVICE_ID);
+  configASSERT(ConfigPtr != NULL);
 
-//   Status_CfgInitialize = XSpi_CfgInitialize(&SpiInstance, ConfigPtr,
-//           ConfigPtr->BaseAddress);
-//   configASSERT(Status_CfgInitialize == XST_SUCCESS);
+  Status_CfgInitialize = XSpi_CfgInitialize(&SpiInstance, ConfigPtr,
+          ConfigPtr->BaseAddress);
+  configASSERT(Status_CfgInitialize == XST_SUCCESS);
 
-//   /* Setup interrupt system */
-//   Status_SetupIntrSystem = SpiSetupIntrSystem(&SpiInstance);
-//   configASSERT(Status_SetupIntrSystem == XST_SUCCESS);
+  /* Setup interrupt system */
+  Status_SetupIntrSystem = SpiSetupIntrSystem(&SpiInstance);
+  configASSERT(Status_SetupIntrSystem == XST_SUCCESS);
 
-//   /* Setup SPI status handler to indicate that SpiIntrHandler
-//   should be called when there is an interrupt (doesn't PLIC table do this?) */
-//   XSpi_SetStatusHandler(&SpiInstance, &SpiInstance, 
-//           (XSpi_StatusHandler) SpiStatusHandler);
+  /* Setup SPI status handler to indicate that SpiIntrHandler
+  should be called when there is an interrupt */
+  XSpi_SetStatusHandler(&SpiInstance, &SpiInstance, 
+          (XSpi_StatusHandler) SpiStatusHandler);
 
-//   /* Set device to master mode and loopback mode */
-//   Status_SetOptions = XSpi_SetOptions(&SpiInstance, XSP_MASTER_OPTION |
-//           XSP_LOOPBACK_OPTION);
-//   configASSERT(Status_SetOptions == XST_SUCCESS);
+  /* Set device to master mode and loopback mode */
+  Status_SetOptions = XSpi_SetOptions(&SpiInstance, XSP_MASTER_OPTION |
+          XSP_LOOPBACK_OPTION);
+  configASSERT(Status_SetOptions == XST_SUCCESS);
 
-//   /* Start the SPI driver so that the device and interrupts are enabled */
-//   XSpi_Start(&SpiInstance);
+  /* Start the SPI driver so that the device and interrupts are enabled */
+  XSpi_Start(&SpiInstance);
 
-//   /* Put data to send in write buffer, initialize read buffer to zero */
-//   Test = 0x10;
-//   for (Count = 0; Count < BUFFER_SIZE; Count++) {
-//     WriteBuffer[Count] = (char) (Count + Test);
-//     ReadBuffer[Count] = 0;
-//   }
+  /* Put data to send in write buffer, initialize read buffer to zero */
+  Test = 0x10;
+  for (Count = 0; Count < BUFFER_SIZE; Count++) {
+    WriteBuffer[Count] = (char) (Count + Test);
+    ReadBuffer[Count] = 0;
+  }
 
-//   /* To receive confirmation that buffers contain same data */
-//   printf("WriteBuffer[3] is %d\n", WriteBuffer[3]);
+  /* To receive confirmation that buffers contain same data */
+  printf("WriteBuffer[3] is %d\n", WriteBuffer[3]);
   
-//   /* Transmit the data */
-//   TransferInProgress = TRUE;
-//   XSpi_Transfer(&SpiInstance, WriteBuffer, ReadBuffer, BUFFER_SIZE);
+  /* Transmit the data */
+  TransferInProgress = TRUE;
+  XSpi_Transfer(&SpiInstance, WriteBuffer, ReadBuffer, BUFFER_SIZE);
 
-//   /* Wait for transfer to finish */
-//   while (TransferInProgress) {
-//   }
+  /* Wait for transfer to finish */
+  while (TransferInProgress) {
+  }
 
-//   /* Compare received data with transmitted data */
-//   for (Count = 0; Count < BUFFER_SIZE; Count++) {
-//     configASSERT(WriteBuffer[Count] == ReadBuffer[Count]);
-//   }
+  /* Compare received data with transmitted data */
+  for (Count = 0; Count < BUFFER_SIZE; Count++) {
+    configASSERT(WriteBuffer[Count] == ReadBuffer[Count]);
+  }
 
-//   /* To receive confirmation that buffers contain same data */
-//   printf("ReaderBuffer[3] is %d\n", ReadBuffer[3]);
+  /* To receive confirmation that buffers contain same data */
+  printf("ReaderBuffer[3] is %d\n", ReadBuffer[3]);
 
-//   vTaskDelete(NULL);
+  vTaskDelete(NULL);
 
-// }
+}
 
 // /*-----------------------------------------------------------*/
 
@@ -312,9 +312,9 @@ static int SpiSetupIntrSystem(XSpi *SpiPtr)
    * for the device occurs, the device driver handler performs the
    * specific interrupt processing for the device
    */
-  Status = PLIC_register_interrupt_handler(&Plic, PLIC_SOURCE_SPI,
+  Status = PLIC_register_interrupt_handler(&Plic, PLIC_SOURCE_SPI1,
           XSpi_InterruptHandler, SpiPtr);
-  if (Status != PLIC_SOURCE_SPI) {
+  if (Status != PLIC_SOURCE_SPI1) {
     return XST_FAILURE;
   }
 

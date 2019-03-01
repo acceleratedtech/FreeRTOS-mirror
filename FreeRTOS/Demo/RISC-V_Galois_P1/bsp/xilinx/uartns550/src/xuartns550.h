@@ -446,6 +446,7 @@ void XUartNs550_GetDataFormat(XUartNs550 *InstancePtr,
 void XUartNs550_SetHandler(XUartNs550 *InstancePtr, XUartNs550_Handler FuncPtr,
 				void *CallBackRef);
 
+// void XUartNs550_InterruptHandler(void *UartInstancePtr);
 void XUartNs550_InterruptHandler(XUartNs550 *InstancePtr);
 
 /*

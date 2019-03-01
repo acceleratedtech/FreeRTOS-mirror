@@ -159,6 +159,8 @@ void XUartNs550_SetHandler(XUartNs550 *InstancePtr,
 ******************************************************************************/
 void XUartNs550_InterruptHandler(XUartNs550 *InstancePtr)
 {
+	// XUartNs550 *InstancePtr = (XUartNs550 *)UartInstancePtr;
+
 	u8 IsrStatus;
 
 	Xil_AssertVoid(InstancePtr != NULL);

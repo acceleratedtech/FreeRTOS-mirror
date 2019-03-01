@@ -14,13 +14,18 @@ plic_instance_t Plic;
 void prvSetupHardware( void )
 {
     // Resets PLIC, threshold 0, nothing enabled
-    PLIC_init(&Plic, PLIC_BASE_ADDR, 4, 4);
+    PLIC_init(&Plic, PLIC_BASE_ADDR, 9, 4);
 
     // Set priorities
     PLIC_set_priority(&Plic, PLIC_SOURCE_UART0, PLIC_PRIORITY_UART0);
+    PLIC_set_priority(&Plic, PLIC_SOURCE_ETHERNET, PLIC_PRIORITY_ETHERNET);
+    PLIC_set_priority(&Plic, PLIC_SOURCE_DMA0, PLIC_PRIORITY_DMA0);
+    PLIC_set_priority(&Plic, PLIC_SOURCE_DMA1, PLIC_PRIORITY_DMA1);
+    PLIC_set_priority(&Plic, PLIC_SOURCE_SPI0, PLIC_PRIORITY_SPI0);
     PLIC_set_priority(&Plic, PLIC_SOURCE_UART1, PLIC_PRIORITY_UART1);
-    PLIC_set_priority(&Plic, PLIC_SOURCE_IIC, PLIC_PRIORITY_IIC);
-    PLIC_set_priority(&Plic, PLIC_SOURCE_SPI, PLIC_PRIORITY_SPI);
+    PLIC_set_priority(&Plic, PLIC_SOURCE_IIC0, PLIC_PRIORITY_IIC0);
+    PLIC_set_priority(&Plic, PLIC_SOURCE_SPI1, PLIC_PRIORITY_SPI1);
+    PLIC_set_priority(&Plic, PLIC_SOURCE_IIC1, PLIC_PRIORITY_IIC1);
 
     uart0_init();
 }
