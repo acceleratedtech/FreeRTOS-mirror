@@ -56,7 +56,7 @@
 #include "bsp.h"
 #include "plic_driver.h"
 
-#define TEST_BUFFER_SIZE	16
+#define TEST_BUFFER_SIZE	3
 #define BARCODE_LENGTH 		10
 
 /*-----------------------------------------------------------*/
@@ -85,7 +85,7 @@ static int UartNs550SetupIntrSystem(XUartNs550 *UartPtr);
 void main_newuart( void )
 {
 	/* Create UART test */
-	xTaskCreate( vUartIntrTest, "UART Intr Test", 2000, NULL, 0, NULL );
+	xTaskCreate( vBarcodeTest, "UART Barcode Test", 3000, NULL, 0, NULL );
 
 	/* Start the kernel.  From here on, only tasks and interrupts will run. */
 	vTaskStartScheduler();
@@ -118,7 +118,7 @@ void vUartIntrTest( void *pvParameters )
 
 	(void) pvParameters;
 
-	int Status_Init, Status_SetupIntr;
+	int Status_Init, Status_SetupIntr, Status_SelfTest;
 	u32 Index;
 	u16 Options;
 	u32 BadByteCount = 0;
@@ -127,20 +127,22 @@ void vUartIntrTest( void *pvParameters )
 	Status_Init = XUartNs550_Initialize(&UartNs550, XPAR_UARTNS550_1_DEVICE_ID);
 	configASSERT(Status_Init == XST_SUCCESS);
 
+	/* Perform a self-test to ensure that the hardware was built correctly */
+	Status_SelfTest = XUartNs550_SelfTest(&UartNs550);
+	configASSERT(Status_SelfTest == XST_SUCCESS);
+
 	/* Setup interrupt system */
 	Status_SetupIntr = UartNs550SetupIntrSystem(&UartNs550);
 	configASSERT(Status_SetupIntr == XST_SUCCESS);
 
 	/* Set UART status handler to indicate that XUartNs550StatusHandler
 	should be called when there is an interrupt */
-	// XUartNs550_SetHandler(&UartNs550, (XUartNs550_Handler) UartNs550StatusHandler, 
-	// 	&UartNs550);
 	XUartNs550_SetHandler(&UartNs550, UartNs550StatusHandler, 
 		&UartNs550);
 
 	/* Enable interrupts, enable loopback mode, and enable FIFOs */
 	Options = XUN_OPTION_DATA_INTR | XUN_OPTION_LOOPBACK |
-			XUN_OPTION_FIFOS_ENABLE;
+			XUN_OPTION_FIFOS_ENABLE | XUN_FIFO_TX_RESET | XUN_FIFO_RX_RESET;
 	XUartNs550_SetOptions(&UartNs550, Options);
 
 	/* Fill send buffer and zero receive buffer */
@@ -149,16 +151,15 @@ void vUartIntrTest( void *pvParameters )
 		RecvBuffer[Index] = 0;
 	}
 
-	/* Send buffer */
-	XUartNs550_Send(&UartNs550, SendBuffer, TEST_BUFFER_SIZE);
-
 	/* Receive data */
 	XUartNs550_Recv(&UartNs550, RecvBuffer, TEST_BUFFER_SIZE);
 
+	/* Send buffer */
+	XUartNs550_Send(&UartNs550, SendBuffer, TEST_BUFFER_SIZE);
+
 	/* Wait for the entire buffer to be received */
 	while ((TotalReceivedCount != TEST_BUFFER_SIZE) ||
-		(TotalSentCount != TEST_BUFFER_SIZE)) {
-	}
+		(TotalSentCount != TEST_BUFFER_SIZE));
 
 	/* Check that buffer was successfully received */
 	for (Index = 0; Index < TEST_BUFFER_SIZE; Index++) {
@@ -169,8 +170,6 @@ void vUartIntrTest( void *pvParameters )
 
 	/* Check that there were no bytes wrong or missed */
 	configASSERT( BadByteCount == 0 );
-
-	printf("done");
 
 	/* Clear the counters */
 	TotalErrorCount = 0;
@@ -188,7 +187,7 @@ void vBarcodeTest( void *pvParameters )
 	/* Test receiving barcode using interrupts via UART1 */
 	(void) pvParameters;
 
-	int Status_Init, Status_SetupIntr;
+	int Status_Init, Status_SetupIntr, Status_SelfTest;
 	u32 Index;
 	u16 Options;
 	u32 BadByteCount = 0;
@@ -203,19 +202,20 @@ void vBarcodeTest( void *pvParameters )
 
 	/* Set UART status handler to indicate that UartNs550StatusHandler
 	should be called when there is an interrupt */
-	XUartNs550_SetHandler(&UartNs550, (XUartNs550_Handler) UartNs550StatusHandler, 
+	XUartNs550_SetHandler(&UartNs550, UartNs550StatusHandler, 
 		&UartNs550);
 
-	/* Enable interrupts and enable FIFOs */
-	Options = XUN_OPTION_DATA_INTR | XUN_OPTION_FIFOS_ENABLE;
+	/* Enable interrupts and reset and enable FIFOs */
+	Options = XUN_OPTION_DATA_INTR | XUN_OPTION_FIFOS_ENABLE 
+				| XUN_FIFO_TX_RESET | XUN_FIFO_RX_RESET;
 	XUartNs550_SetOptions(&UartNs550, Options);
 
 	/* Receive data */
-	XUartNs550_Recv(&UartNs550, RecvBuffer, TEST_BUFFER_SIZE);
+	XUartNs550_Recv(&UartNs550, RecvBuffer, BARCODE_LENGTH);
 
 	while( TotalReceivedCount < BARCODE_LENGTH );
 	
-	printf("Received barcode: %s \n", RecvBuffer);
+	printf("Rx: %s \n", RecvBuffer);
 
 	/* Clear the counters */
 	TotalErrorCount = 0;
@@ -320,7 +320,7 @@ static void UartNs550StatusHandler(void *CallBackRef, u32 Event,
 
 // 	/* Set UART status handler to indicate that UartNs550StatusHandler
 // 	should be called when there is an interrupt */
-// 	XUartNs550_SetHandler(&UartNs550, (XUartNs550_Handler) UartNs550StatusHandler, 
+// XUartNs550_SetHandler(&UartNs550, UartNs550StatusHandler, 
 // 		&UartNs550);
 
 // 	/* Enable interrupts and enable FIFOs */

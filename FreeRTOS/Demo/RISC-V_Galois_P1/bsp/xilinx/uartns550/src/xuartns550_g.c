@@ -1,5 +1,5 @@
-/******************************************************************************
-*
+
+/*
 * Copyright (C) 2002 - 2015 Xilinx, Inc.  All rights reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -76,13 +76,13 @@ XUartNs550_Config XUartNs550_ConfigTable[] =
 		XPAR_UARTNS550_0_DEVICE_ID,
 		XPAR_UARTNS550_0_BASEADDR,
 		XPAR_UARTNS550_0_CLOCK_HZ,
-		XPAR_DEFAULT_BAUD_RATE
+		XPAR_UARTNS550_0_BAUD_RATE
 	},
 	{
 		XPAR_UARTNS550_1_DEVICE_ID,
 		XPAR_UARTNS550_1_BASEADDR,
 		XPAR_UARTNS550_1_CLOCK_HZ,
-		XPAR_DEFAULT_BAUD_RATE
+		XPAR_UARTNS550_1_BAUD_RATE
 	}
 };
 /** @} */
