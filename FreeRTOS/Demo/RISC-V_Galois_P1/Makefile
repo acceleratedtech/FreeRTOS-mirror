@@ -70,6 +70,7 @@ DEMO_SRC = main.c \
 	bsp/xilinx/uartns550/src/xuartns550_stats.c \
 	bsp/xilinx/uartns550/src/xuartns550_options.c \
 	bsp/xilinx/uartns550/src/xuartns550_intr.c \
+	bsp/xilinx/uartns550/src/xuartns550_l.c \
 	bsp/xilinx/iic/src/xiic.c \
 	bsp/xilinx/iic/src/xiic_g.c \
 	bsp/xilinx/iic/src/xiic_sinit.c \

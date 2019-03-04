@@ -75,6 +75,8 @@ static void vUartIntrTest( void *pvParameters );
 
 static void vBarcodeTest( void *pvParameters );
 
+static void vTestPrintf( void *pvParameters );
+
 static void UartNs550StatusHandler(void *CallBackRef, u32 Event, 
 	unsigned int EventData);
 
@@ -85,7 +87,7 @@ static int UartNs550SetupIntrSystem(XUartNs550 *UartPtr);
 void main_newuart( void )
 {
 	/* Create UART test */
-	xTaskCreate( vBarcodeTest, "UART Barcode Test", 3000, NULL, 0, NULL );
+	xTaskCreate( vTestPrintf, "UART Printf Test", 3000, NULL, 0, NULL );
 
 	/* Start the kernel.  From here on, only tasks and interrupts will run. */
 	vTaskStartScheduler();
@@ -180,6 +182,44 @@ void vUartIntrTest( void *pvParameters )
 
 }
 
+/*-----------------------------------------------------------*/
+void vTestPrintf( void *pvParameters )
+{
+	/* Test receiving barcode using interrupts via UART1 */
+	(void) pvParameters;
+
+	int Status_Init, Status_SetupIntr, Status_SelfTest;
+	u32 Index;
+	u16 Options;
+	u32 BadByteCount = 0;
+
+	/* Initialize the UartNs550 driver so that it's ready to use */
+	Status_Init = XUartNs550_Initialize(&UartNs550, XPAR_UARTNS550_0_DEVICE_ID);
+	configASSERT(Status_Init == XST_SUCCESS);
+
+	/* Setup interrupt system */
+	Status_SetupIntr = UartNs550SetupIntrSystem(&UartNs550);
+	configASSERT(Status_SetupIntr == XST_SUCCESS);
+
+	/* Set UART status handler to indicate that UartNs550StatusHandler
+	should be called when there is an interrupt */
+	XUartNs550_SetHandler(&UartNs550, UartNs550StatusHandler, 
+		&UartNs550);
+
+	/* Enable interrupts and reset and enable FIFOs */
+	Options = XUN_OPTION_DATA_INTR | XUN_OPTION_FIFOS_ENABLE 
+				| XUN_FIFO_TX_RESET | XUN_FIFO_RX_RESET;
+	XUartNs550_SetOptions(&UartNs550, Options);
+
+	printf("hi!");
+
+	/* Clear the counters */
+	TotalErrorCount = 0;
+	TotalReceivedCount = 0;
+	TotalSentCount = 0;
+
+	vTaskDelete(NULL);
+}
 /*-----------------------------------------------------------*/
 
 void vBarcodeTest( void *pvParameters )
