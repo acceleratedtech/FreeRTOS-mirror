@@ -1128,6 +1128,7 @@ xCloseEvent.pvData = ( void * ) xSocket;
 		}
 		else
 		{
+			FreeRTOS_debug_printf( ( "FreeRTOS_closesocket: success\n" ) );
 			xResult = 1;
 		}
 	}
@@ -1144,6 +1145,7 @@ NetworkBufferDescriptor_t *pxNetworkBuffer;
 
 	#if( ipconfigUSE_TCP == 1 )
 	{
+		FreeRTOS_debug_printf( ( "vSocketClose called\n" ) );
 		/* For TCP: clean up a little more. */
 		if( pxSocket->ucProtocol == ( uint8_t ) FREERTOS_IPPROTO_TCP )
 		{
@@ -1200,6 +1202,7 @@ NetworkBufferDescriptor_t *pxNetworkBuffer;
 
 	/* Now the socket is not bound the list of waiting packets can be
 	drained. */
+	FreeRTOS_debug_printf( ( "vSocketClose: about to call vReleaseNetworkBufferAndDescriptor\n" ) );
 	if( pxSocket->ucProtocol == ( uint8_t ) FREERTOS_IPPROTO_UDP )
 	{
 		while( listCURRENT_LIST_LENGTH( &( pxSocket->u.xUDP.xWaitingPacketsList ) ) > 0U )
