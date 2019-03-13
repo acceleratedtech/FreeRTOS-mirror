@@ -898,11 +898,13 @@ NetworkBufferDescriptor_t *pxResult;
 	{
 		/* Obtain the network buffer from the zero copy pointer. */
 		pucBuffer = ( uint8_t * ) pvBuffer;
+		FreeRTOS_debug_printf( ("pxUDPPayloadBuffer_to_NetworkBuffer: pvBuffer = %p\r\n", pucBuffer) );
 
 		/* The input here is a pointer to a payload buffer.  Subtract
 		the total size of a UDP/IP header plus the size of the header in
 		the network buffer, usually 8 + 2 bytes. */
 		pucBuffer -= ( sizeof( UDPPacket_t ) + ipBUFFER_PADDING );
+		FreeRTOS_debug_printf( ("pxUDPPayloadBuffer_to_NetworkBuffer: pucBuffer = %p\r\n", pucBuffer) );
 
 		/* Here a pointer was placed to the network descriptor,
 		As a pointer is dereferenced, make sure it is well aligned */

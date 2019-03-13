@@ -137,6 +137,7 @@ section macros. */
 	UBaseType_t bIsValidNetworkDescriptor( const NetworkBufferDescriptor_t * pxDesc )
 	{
 		uint32_t offset = ( uint32_t ) ( ((const char *)pxDesc) - ((const char *)xNetworkBuffers) );
+		FreeRTOS_debug_printf( ("bIsValidNetworkDescriptor: pxDesc: %p, offset: %u\r\n", pxDesc, offset) );
 		if( ( offset >= sizeof( xNetworkBuffers ) ) ||
 			( ( offset % sizeof( xNetworkBuffers[0] ) ) != 0 ) )
 			return pdFALSE;
@@ -366,6 +367,7 @@ BaseType_t xListItemAlreadyInFreeList;
 	if( bIsValidNetworkDescriptor( pxNetworkBuffer ) == pdFALSE_UNSIGNED )
 	{
 		FreeRTOS_debug_printf( ( "vReleaseNetworkBufferAndDescriptor: Invalid buffer %p\n", pxNetworkBuffer ) );
+		configASSERT(1==0);
 		return ;
 	}
 	/* Ensure the buffer is returned to the list of free buffers before the

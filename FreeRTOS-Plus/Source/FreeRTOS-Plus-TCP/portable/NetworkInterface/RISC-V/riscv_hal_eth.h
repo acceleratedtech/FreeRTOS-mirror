@@ -7,14 +7,16 @@
 #include "plic_driver.h"
 #include "bsp.h"
 
+#include "semphr.h"
+
 /* Driver instances*/
 extern XAxiEthernet AxiEthernetInstance;
 extern XAxiDma AxiDmaInstance;
 extern volatile int FramesTx;
 extern volatile int FramesRx;
 
-#define RXBD_CNT		10//ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS	/* Number of RxBDs to use */
-#define TXBD_CNT		10//ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS	/* Number of TxBDs to use */
+#define RXBD_CNT		5//ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS	/* Number of RxBDs to use */
+#define TXBD_CNT		5//ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS	/* Number of TxBDs to use */
 #define BD_ALIGNMENT		XAXIDMA_BD_MINIMUM_ALIGNMENT/* Byte alignment of
 							     * BDs
 							     */
@@ -26,6 +28,9 @@ extern volatile int FramesRx;
 						 * Amount of time to delay waiting on
 						 * PHY to reset.
 						 */
+
+
+extern SemaphoreHandle_t xTXDescriptorSemaphore;
 
 /* Interrupt handlers */
 void TxIntrHandler(XAxiDma_BdRing *TxRingPtr);

@@ -1145,15 +1145,19 @@ NetworkBufferDescriptor_t *pxNetworkBuffer;
 
 	#if( ipconfigUSE_TCP == 1 )
 	{
-		FreeRTOS_debug_printf( ( "vSocketClose called\n" ) );
+		FreeRTOS_debug_printf( ( "vSocketClose called, protocol %u\r\n", pxSocket->ucProtocol ) );
 		/* For TCP: clean up a little more. */
 		if( pxSocket->ucProtocol == ( uint8_t ) FREERTOS_IPPROTO_TCP )
 		{
 			#if( ipconfigUSE_TCP_WIN == 1 )
 			{
+				FreeRTOS_debug_printf( ( "vSocketClose: about to call vReleaseNetworkBufferAndDescriptor for FREERTOS_IPPROTO_TCP\r\n" ) );
 				if( pxSocket->u.xTCP.pxAckMessage != NULL )
 				{
+					FreeRTOS_debug_printf( ( "vSocketClose: pxSocket->u.xTCP.pxAckMessage != NULL\r\n" ) );
 					vReleaseNetworkBufferAndDescriptor( pxSocket->u.xTCP.pxAckMessage );
+				} else {
+					FreeRTOS_debug_printf( ( "vSocketClose: pxSocket->u.xTCP.pxAckMessage == NULL\r\n" ) );
 				}
 				/* Free the resources which were claimed by the tcpWin member */
 				vTCPWindowDestroy( &pxSocket->u.xTCP.xTCPWindow );
@@ -1202,9 +1206,9 @@ NetworkBufferDescriptor_t *pxNetworkBuffer;
 
 	/* Now the socket is not bound the list of waiting packets can be
 	drained. */
-	FreeRTOS_debug_printf( ( "vSocketClose: about to call vReleaseNetworkBufferAndDescriptor\n" ) );
 	if( pxSocket->ucProtocol == ( uint8_t ) FREERTOS_IPPROTO_UDP )
 	{
+		FreeRTOS_debug_printf( ( "vSocketClose: about to call vReleaseNetworkBufferAndDescriptor for FREERTOS_IPPROTO_UDP\r\n" ) );
 		while( listCURRENT_LIST_LENGTH( &( pxSocket->u.xUDP.xWaitingPacketsList ) ) > 0U )
 		{
 			pxNetworkBuffer = ( NetworkBufferDescriptor_t * ) listGET_OWNER_OF_HEAD_ENTRY( &( pxSocket->u.xUDP.xWaitingPacketsList ) );

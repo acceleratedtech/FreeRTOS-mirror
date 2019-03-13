@@ -81,6 +81,11 @@ XAxiDma AxiDmaInstance;
 static TaskHandle_t DmaFreeBDTaskHandle = NULL;
 static TaskHandle_t prvEMACDeferredInterruptHandlerTaskHandle = NULL;
 
+/* xTXDescriptorSemaphore is a counting semaphore with
+a maximum count of ETH_TXBUFNB, which is the number of
+DMA TX descriptors. */
+SemaphoreHandle_t xTXDescriptorSemaphore = NULL;
+
 /*
  * Number of bytes to reserve for BD space for the number of BDs desired
  */
@@ -159,6 +164,7 @@ int AxiEtherentConfigureTIPhy(XAxiEthernet *AxiEthernetInstancePtr, u32 PhyAddr)
 void DmaFreeBDTask( void *pvParameters ) {
 	(void) pvParameters;
 	uint32_t bd_idx = 0;
+	uint32_t uxCurrentCount = 0;
 	XAxiDma_BdRing *TxRingPtr = XAxiDma_GetTxRing(&AxiDmaInstance);
 	XAxiDma_Bd * BdPtr;
 	int BdLimit = 1;
@@ -169,9 +175,16 @@ void DmaFreeBDTask( void *pvParameters ) {
 	for (;;) {
 		/* wait for notification */
 		bd_idx = ulTaskNotifyTake( pdFALSE, portMAX_DELAY );
+
+		uxCurrentCount = uxSemaphoreGetCount( xTXDescriptorSemaphore );
+		FreeRTOS_printf( ( "DmaFreeBDTask: TX DMA buffers: lowest %u\n", uxCurrentCount ) );
+
 		FreeRTOS_debug_printf( ("DmaFreeBDTask: got notified, count is %lu\r\n", bd_idx) );
 		
+		taskENTER_CRITICAL();
 		int BdReturned = XAxiDma_BdRingFromHw(TxRingPtr, BdLimit, &BdPtr);
+		taskEXIT_CRITICAL();
+
 		if ( BdReturned != BdLimit) {
 			FreeRTOS_debug_printf( ("DmaFreeBDTask: warning, returned %i BDs, requested %i BDs\r\n", BdReturned, BdLimit) );
 			continue;
@@ -193,6 +206,8 @@ void DmaFreeBDTask( void *pvParameters ) {
 		}
 
 		configASSERT( XAxiDma_BdRingFree(TxRingPtr, BdLimit, BdPtr) == 0 );
+		/* Tell the counting semaphore that one more TX descriptor is available. */
+		xSemaphoreGive( xTXDescriptorSemaphore );
 	}
 }
 
@@ -233,7 +248,9 @@ void prvEMACDeferredInterruptHandlerTask( void *pvParameters ) {
 		DMADescriptor_t again) that references the Ethernet buffer containing the
 		received data. */
 		//pxDMARxDescriptor = GetNextRxDescriptor();
+		taskENTER_CRITICAL();
 		int BdReturned = XAxiDma_BdRingFromHw(RxRingPtr, BdLimit, &BdPtr);
+		taskEXIT_CRITICAL();
 		if ( BdReturned != BdLimit) {
 			FreeRTOS_debug_printf( ("prvEMACDeferredInterruptHandlerTask: warning, returned %i BDs, requested %i BDs\r\n", BdReturned, BdLimit) );
 			continue;

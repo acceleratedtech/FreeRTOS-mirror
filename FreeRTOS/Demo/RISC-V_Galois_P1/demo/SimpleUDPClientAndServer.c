@@ -66,8 +66,8 @@ static void prvSimpleZeroCopyServerTask( void *pvParameters );
 void vStartSimpleUDPClientServerTasks( uint16_t usStackSize, uint32_t ulPort, UBaseType_t uxPriority )
 {
 	/* Create the client and server tasks that do use the zero copy interface. */
-	xTaskCreate( prvSimpleZeroCopyUDPClientTask, "SimpZCpyClnt", usStackSize, ( void * ) ( ulPort + 1 ), uxPriority, NULL );
-	//xTaskCreate( prvSimpleZeroCopyServerTask, "SimpZCpySrv", usStackSize, ( void * ) ( ulPort + 1 ), uxPriority + 1, NULL );
+	//xTaskCreate( prvSimpleZeroCopyUDPClientTask, "SimpZCpyClnt", usStackSize, ( void * ) ( ulPort + 1 ), uxPriority, NULL );
+	xTaskCreate( prvSimpleZeroCopyServerTask, "SimpZCpySrv", usStackSize, ( void * ) ( ulPort + 1 ), uxPriority + 1, NULL );
 }
 /*-----------------------------------------------------------*/
 
@@ -212,6 +212,10 @@ Socket_t xListeningSocket;
 	/* Bind the socket to the port that the client task will send to. */
 	FreeRTOS_bind( xListeningSocket, &xBindAddress, sizeof( xBindAddress ) );
 
+	pucUDPPayloadBuffer = ( uint8_t * ) FreeRTOS_GetUDPPayloadBuffer( 128,
+                                                                      portMAX_DELAY );
+
+	printf("prvSimpleZeroCopyServerTask: socket bound\r\n");
 	for( ;; )
 	{
 		/* Receive data on the socket.  ulFlags has the zero copy bit set
@@ -221,7 +225,7 @@ Socket_t xListeningSocket;
 		IP stack is no longer responsible for releasing the buffer, and
 		the task *must* return the buffer to the stack when it is no longer
 		needed.  By default the block time is portMAX_DELAY. */
-		lBytes = FreeRTOS_recvfrom( xListeningSocket, ( void * ) &pucUDPPayloadBuffer, 0, FREERTOS_ZERO_COPY, &xClient, &xClientLength );
+		lBytes = FreeRTOS_recvfrom( xListeningSocket, ( void * ) &pucUDPPayloadBuffer, 128, FREERTOS_ZERO_COPY, &xClient, &xClientLength );
 
 		/* Print the received characters. */
 		if( lBytes > 0 )

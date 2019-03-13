@@ -30,7 +30,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "semphr.h"
 
 #include "FreeRTOS_IP.h"
 
@@ -44,12 +43,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* Board specific includes */
 #include "riscv_hal_eth.h"
-
-
-/* xTXDescriptorSemaphore is a counting semaphore with
-a maximum count of ETH_TXBUFNB, which is the number of
-DMA TX descriptors. */
-static SemaphoreHandle_t xTXDescriptorSemaphore = NULL;
 
 /* First statically allocate the buffers, ensuring an additional ipBUFFER_PADDING
 bytes are allocated to each buffer.  This example makes no effort to align
@@ -106,10 +99,13 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkB
 
 	/* unused, we always release after send */
 	(void) xReleaseAfterSend;
+	xSemaphoreTake( xTXDescriptorSemaphore, portMAX_DELAY );
 
 	/* get BD ring descriptor */
+	taskENTER_CRITICAL();
 	XAxiDma_BdRing *TxRingPtr = XAxiDma_GetTxRing(&AxiDmaInstance);
 	XAxiDma_Bd * BdPtr;
+	taskEXIT_CRITICAL();
 
 	/* allocate next BD from the BD ring */
 	configASSERT( XAxiDma_BdRingAlloc(TxRingPtr, 1, &BdPtr) == 0);
@@ -119,6 +115,7 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkB
 	FreeRTOS_debug_printf( ("xNetworkInterfaceOutput: pxNetworkBuffer->xDataLength = %lu\r\n", pxNetworkBuffer->xDataLength));
 
 	/* configure BD */
+	taskENTER_CRITICAL();
 	XAxiDma_BdSetBufAddr(BdPtr, (u32)pxNetworkBuffer->pucEthernetBuffer);
 	XAxiDma_BdSetLength(BdPtr, pxNetworkBuffer->xDataLength,TxRingPtr->MaxTransferLen);
 	XAxiDma_BdSetCtrl(BdPtr, XAXIDMA_BD_CTRL_TXSOF_MASK |
@@ -129,6 +126,7 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxNetworkB
 
 	/* start transaction */
 	configASSERT( XAxiDma_BdRingStart(TxRingPtr) == 0);
+	taskEXIT_CRITICAL();
 
 	/* Call the standard trace macro to log the send event. */
     iptraceNETWORK_INTERFACE_TRANSMIT();
