@@ -30,8 +30,6 @@ QueueHandle_t xQueue;
 /* Variable for holding handle of Task2 */
 TaskHandle_t xTask2Handle;
 
-void vTaskCheck( void *pvParameters );
-
 void printBytes( void *ptr, int size );
 
 void prvTask1( void *pvParameters );

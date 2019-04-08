@@ -25,42 +25,9 @@
  * 1 tab == 4 spaces!
  */
 
-/******************************************************************************
- * NOTE 1:  This project provides two demo applications.  A simple blinky
- * style project, and a more comprehensive test and demo application.  The
- * mainCREATE_SIMPLE_BLINKY_DEMO_ONLY setting in main.c is used to select
- * between the two.  See the notes on using mainCREATE_SIMPLE_BLINKY_DEMO_ONLY
- * in main.c.  This file implements the simply blinky style version.
+ /******************************************************************************
  *
- * NOTE 2:  This file only contains the source code that is specific to the
- * basic demo.  Generic functions, such FreeRTOS hook functions, and functions
- * required to configure the hardware are defined in main.c.
- ******************************************************************************
- *
- * main_blinky() creates one queue, and two tasks.  It then starts the
- * scheduler.
- *
- * The Queue Send Task:
- * The queue send task is implemented by the prvQueueSendTask() function in
- * this file.  prvQueueSendTask() sits in a loop that causes it to repeatedly
- * block for 1000 milliseconds, before sending the value 100 to the queue that
- * was created within main_blinky().  Once the value is sent, the task loops
- * back around to block for another 1000 milliseconds...and so on.
- *
- * The Queue Receive Task:
- * The queue receive task is implemented by the prvQueueReceiveTask() function
- * in this file.  prvQueueReceiveTask() sits in a loop where it repeatedly
- * blocks on attempts to read data from the queue that was created within
- * main_blinky().  When data is received, the task checks the value of the
- * data, and if the value equals the expected 100, writes 'Blink' to the UART
- * (the UART is used in place of the LED to allow easy execution in QEMU).  The
- * 'block time' parameter passed to the queue receive function specifies that
- * the task should be held in the Blocked state indefinitely to wait for data to
- * be available on the queue.  The queue receive task will only leave the
- * Blocked state when the queue send task writes to the queue.  As the queue
- * send task writes to the queue every 1000 milliseconds, the queue receive
- * task leaves the Blocked state every 1000 milliseconds, and therefore toggles
- * the LED every 200 milliseconds.
+ * See the padding_leakage_explanation for a full explanation of this code.
  */
 
 /* Standard includes. */
@@ -79,8 +46,7 @@
 /*-----------------------------------------------------------*/
 
 /*
- * Called by main when mainCREATE_SIMPLE_BLINKY_DEMO_ONLY is set to 1 in
- * main.c.
+ * Called by main when PROG=main_padding_leakage
  */
 void main_padding_leakage( void );
 
@@ -97,9 +63,6 @@ void main_padding_leakage( void )
 	xQueue = xQueueCreate( 1, sizeof( struct test ) ); 
 
 	if( xQueue != NULL ) {
-		
-		/* Create task to check alignment rules */ 
-		xTaskCreate( vTaskCheck, "Check Align", 1000, NULL, 1, NULL ); 
 
 		/* Create Task1 */
 		xTaskCreate( prvTask1, "Task1", 1000, NULL, 2, NULL );
@@ -122,20 +85,6 @@ void main_padding_leakage( void )
 	for( ;; );
 }
 
-/*-----------------------------------------------------------*/
-
-/* Used to check processor-specific alignment
-   Only used for debugging. */
-void vTaskCheck( void *pvParameters ) {
-	
-	(void) pvParameters;
-
-	printf( "Alignment of char = %zu\n", alignof( char ) );
-	printf( "Alignment of int = %zu\n", alignof( char ) );
-	printf( "Alignment of struct = %zu\n", alignof( struct { int a; char b; int c; } ) );
-
-	vTaskDelete( NULL );
-}
 
 /*-----------------------------------------------------------*/
 
@@ -165,7 +114,6 @@ void prvTask1( void *pvParameters ) {
 	/* Allocate memory for secret */ 
 	int* secret_mem = pvPortMalloc( 3 * sizeof( int ) );
 
-		
 	/* Write secret */
 	int secret[3] = { 0xffffffff, 0xffffffff, 0xffffffff };	
 	if( secret_mem != NULL ) {
