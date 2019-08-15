@@ -79,7 +79,7 @@ _HEAP_SIZE = DEFINED(_HEAP_SIZE) ? _HEAP_SIZE : 256K;
  * Define memory layout
  ****************************************************************************/
 MEMORY {
-   cmem : ORIGIN = 0x80000000, LENGTH = 0x00800000
+   cmem : ORIGIN = 0xbffc0000, LENGTH = 0x00040000
 	imem : ORIGIN = 0xc0000000, LENGTH = 0x00080000
 	dmem : ORIGIN = 0xc0080000, LENGTH = 0x00800000
 }
