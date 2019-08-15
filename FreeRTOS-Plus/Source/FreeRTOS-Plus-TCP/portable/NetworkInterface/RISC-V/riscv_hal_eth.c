@@ -92,22 +92,15 @@ static TaskHandle_t prvEMACDeferredInterruptHandlerTaskHandle = NULL;
  * specific to the GNU compiler
  */
 typedef uint8_t EthernetFrame[NUM_PACKETS * XAE_MAX_JUMBO_FRAME_SIZE] __attribute__ ((aligned(BD_ALIGNMENT)));
-// 0x80000000
-static uint8_t * TxFrameBufRef = (uint8_t *)0x80000000;
-//static EthernetFrame TxFrameBuf[TXBD_CNT] __attribute__ ((section(".uncached")));	/* Transmit buffers */
-// 0x80015fc0
-static uint8_t * RxFrameBufRef =(uint8_t *)0x80015fc0;
-//static EthernetFrame RxFrameBuf[RXBD_CNT] __attribute__ ((section(".uncached")));	/* Receive buffers */
+
+static EthernetFrame TxFrameBuf[TXBD_CNT] __attribute__ ((section(".uncached")));	/* Transmit buffers */
+static EthernetFrame RxFrameBuf[RXBD_CNT] __attribute__ ((section(".uncached")));	/* Receive buffers */
 
 /*
  * Aligned memory segments to be used for buffer descriptors
  */
-// 8002bf80
-//char RxBdSpace[RXBD_SPACE_BYTES] __attribute__ ((aligned(BD_ALIGNMENT))) __attribute__ ((section(".uncached")));
-char * RxBdSpaceRef = (char *) 0x8002bf80;
-// 8002c200
-//char TxBdSpace[TXBD_SPACE_BYTES] __attribute__ ((aligned(BD_ALIGNMENT))) __attribute__ ((section(".uncached")));
-char * TxBdSpaceRef = (char *) 0x8002c200;
+char RxBdSpace[RXBD_SPACE_BYTES] __attribute__ ((aligned(BD_ALIGNMENT))) __attribute__ ((section(".uncached")));
+char TxBdSpace[TXBD_SPACE_BYTES] __attribute__ ((aligned(BD_ALIGNMENT))) __attribute__ ((section(".uncached")));
 
 
 /*
@@ -124,8 +117,7 @@ char AxiEthernetMAC[6]  __attribute__((weak)) = { configMAC_ADDR0, configMAC_ADD
 
 uint8_t* AxiEthernetGetTxBuffer(void) {
 	static uint8_t idx = 0;
-	//return (uint8_t*)&TxFrameBuf[idx++ % TXBD_CNT];
-	return (uint8_t *)(TxFrameBufRef + (idx++ % TXBD_CNT)*sizeof(EthernetFrame));
+	return (uint8_t*)&TxFrameBuf[idx++ % TXBD_CNT];
 }
 
 void AxiEthernetUtilErrorTrap(char *Message)
@@ -341,11 +333,8 @@ int DmaSetup(XAxiDma *DmaInstancePtr, u16 AxiDmaDeviceId)
 	/*
 	 * Create the RxBD ring
 	 */
-	//Status = XAxiDma_BdRingCreate(RxRingPtr, (u32) &RxBdSpace,
-	//			     (u32) &RxBdSpace, BD_ALIGNMENT, RXBD_CNT);
-	Status = XAxiDma_BdRingCreate(RxRingPtr, (u32) RxBdSpaceRef,
-				     (u32) RxBdSpaceRef, BD_ALIGNMENT, RXBD_CNT);
-	
+	Status = XAxiDma_BdRingCreate(RxRingPtr, (u32) &RxBdSpace,
+				     (u32) &RxBdSpace, BD_ALIGNMENT, RXBD_CNT);
 	configASSERT( Status == 0);
 
 	XAxiDma_BdClear(&BdTemplate);
@@ -363,10 +352,8 @@ int DmaSetup(XAxiDma *DmaInstancePtr, u16 AxiDmaDeviceId)
 	/*
 	 * Create the TxBD ring
 	 */
-	//Status = XAxiDma_BdRingCreate(TxRingPtr, (u32) &TxBdSpace,
-	//			     (u32) &TxBdSpace, BD_ALIGNMENT, TXBD_CNT);
-	Status = XAxiDma_BdRingCreate(TxRingPtr, (u32) TxBdSpaceRef,
-				     (u32) TxBdSpaceRef, BD_ALIGNMENT, TXBD_CNT);
+	Status = XAxiDma_BdRingCreate(TxRingPtr, (u32) &TxBdSpace,
+				     (u32) &TxBdSpace, BD_ALIGNMENT, TXBD_CNT);
 	configASSERT( Status == 0);
 
 	/*
@@ -395,24 +382,20 @@ int DmaSetup(XAxiDma *DmaInstancePtr, u16 AxiDmaDeviceId)
 
 	BdCurPtr = BdPtr;
 	for (int Index = 0; Index < FreeBdCount; Index++) {
-		//Status = XAxiDma_BdSetBufAddr(BdCurPtr, (u32)&RxFrameBuf[Index]);
-		Status = XAxiDma_BdSetBufAddr(BdCurPtr, (u32)(RxFrameBufRef +(Index*sizeof(EthernetFrame))));
+		Status = XAxiDma_BdSetBufAddr(BdCurPtr, (u32)&RxFrameBuf[Index]);
 		if (Status != XST_SUCCESS) {
 			printf("Rx set buffer addr %x on BD %x failed %d\r\n",
-			//(unsigned int)&RxFrameBuf[Index],
-			(unsigned int)(RxFrameBufRef +(Index*sizeof(EthernetFrame))),
+			(unsigned int)&RxFrameBuf[Index],
 			(UINTPTR)BdCurPtr, Status);
 
 			return XST_FAILURE;
 		}
 
-		//Status = XAxiDma_BdSetLength(BdCurPtr, sizeof(RxFrameBuf[Index]),
-		Status = XAxiDma_BdSetLength(BdCurPtr, sizeof(EthernetFrame),
+		Status = XAxiDma_BdSetLength(BdCurPtr, sizeof(RxFrameBuf[Index]),
 					RxRingPtr->MaxTransferLen);
 		if (Status != XST_SUCCESS) {
 			printf("Rx set length %d on BD %x failed %d\r\n",
-				sizeof(EthernetFrame), (UINTPTR)BdCurPtr, Status);
-			    //sizeof(RxFrameBuf[Index]), (UINTPTR)BdCurPtr, Status);
+			    sizeof(RxFrameBuf[Index]), (UINTPTR)BdCurPtr, Status);
 
 			return XST_FAILURE;
 		}
