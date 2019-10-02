@@ -1,0 +1,10 @@
+language: c
+
+services:
+  - docker
+
+before install:
+  - docker pull galoisinc/besspin:besspin_light
+
+script:
+  - docker run galoisinc/besspin:besspin_light /bin/bash "./compile_all.sh"
