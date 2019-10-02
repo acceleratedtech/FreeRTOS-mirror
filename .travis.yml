@@ -7,4 +7,4 @@ before install:
   - docker pull galoisinc/besspin:besspin_light
 
 script:
-  - docker run galoisinc/besspin:besspin_light -v ${TRAVIS_BUILD_DIR}:/FreeRTOS-mirror /bin/bash "cd FreeRTOS0-mirror; ./compile_all.sh"
+  - docker run galoisinc/besspin:besspin_light -v ${TRAVIS_BUILD_DIR}:/FreeRTOS-mirror /bin/bash "cd FreeRTOS-mirror; ./compile_all.sh"
