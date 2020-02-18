@@ -218,6 +218,8 @@ void mit_exception_handler( long mcause, long mepc, long regs[32] ) {
     // production code. That will introduce a security hole in your
     // system.
 
+    // TODO: When writing to the uart, we should first make sure the
+    // transmit buffer is not full.
     char * uart = (char*) 0x62300000;
 
     const char* abort_msg = "<abort>\n";
