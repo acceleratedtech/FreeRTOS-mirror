@@ -205,8 +205,49 @@ void vPortEndScheduler( void )
 	/* Not implemented. */
 	for( ;; );
 }
+/*-----------------------------------------------------------*/
 
+void mit_exception_handler( long mcause, long mepc, long regs[32] );
 
+// This is called from the infinite loop within the exception handler in portASM.S
+void mit_exception_handler( long mcause, long mepc, long regs[32] ) {
+    // mcause, mepc, and regs are passed in to allow for further
+    // diagnostic information for debugging security exceptions
 
+    // WARNING: Do not dump the registers for security exceptions in
+    // production code. That will introduce a security hole in your
+    // system.
 
+    char * uart = (char*) 0x62300000;
 
+    const char* abort_msg = "<abort>\n";
+    const char* load_tag_msg = "Security Exception: Illegal Load\n";
+    const char* store_tag_msg = "Security Exception: Illegal Store\n";
+    const char* next_pc_tag_msg = "Security Exception: Illegal Store\n";
+    const char* other_msg = "Non-Security Exception\n";
+
+    int i = 0;
+    while (abort_msg[i] != '\0') {
+        *uart = abort_msg[i];
+        i++;
+    }
+
+    const char* msg = other_msg;
+    if (mcause == 16) {
+        msg = load_tag_msg;
+    } else if (mcause == 17) {
+        msg = store_tag_msg;
+    } else if (mcause == 18) {
+        msg = next_pc_tag_msg;
+    }
+
+    i = 0;
+    while (msg[i] != '\0') {
+        *uart = msg[i];
+        i++;
+    }
+
+    for (;;) {}
+
+    regs[0] = mepc; // this is to make compiler be quiet
+}
