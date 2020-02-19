@@ -339,9 +339,9 @@ endif # main_blinky
 
 ARFLAGS=crsv
 
-CFLAGS += -O0 -g3 $(ARCH) $(ABI) $(COMPILER_FLAGS) $(INCLUDES)
+CFLAGS += -g3 $(ARCH) $(ABI) $(COMPILER_FLAGS) $(INCLUDES)
 # Disable warnings for C++ for now
-CPPFLAGS += -O0 -g3 $(ARCH) $(ABI) $(COMPILER_FLAGS) $(INCLUDES)
+CPPFLAGS += -g3 $(ARCH) $(ABI) $(COMPILER_FLAGS) $(INCLUDES)
 
 #
 # Define all object files.
