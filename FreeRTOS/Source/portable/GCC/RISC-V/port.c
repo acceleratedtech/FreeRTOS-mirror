@@ -29,6 +29,11 @@
  * Implementation of functions defined in portable.h for the RISC-V RV32 port.
  *----------------------------------------------------------*/
 
+/* printf for mit_exception_handler */
+#ifndef MIT_NO_PRINTF
+#include <stdio.h>
+#endif
+
 /* Scheduler includes. */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -217,6 +222,9 @@ void mit_exception_handler( long mcause, long mepc, long regs[32] ) {
     // WARNING: Do not dump the registers for security exceptions in
     // production code. That will introduce a security hole in your
     // system.
+#ifdef MIT_NO_PRINTF
+    (void) mepc;
+    (void) regs;
 
     // TODO: When writing to the uart, we should first make sure the
     // transmit buffer is not full.
@@ -250,6 +258,19 @@ void mit_exception_handler( long mcause, long mepc, long regs[32] ) {
     }
 
     for (;;) {}
+#else
+    (void) regs;
 
-    regs[0] = mepc; // this is to make compiler be quiet
+    printf("<abort>\n");
+    if (mcause == 16) {
+        printf("security exception: illegal load\n");
+    } else if (mcause == 17) {
+        printf("security exception: illegal store\n");
+    } else if (mcause == 18) {
+        printf("security exception: illegal next pc>\n");
+    } else {
+        printf("risc-v exception: %ld\n", mcause);
+    }
+    printf("mepc: 0x%lx\n", mepc);
+#endif
 }
